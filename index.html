@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Chat Room">
+<title>Chat Room</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #92c17f;
+    color: #111;
+    text-align: left;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .hide { display: none !important; }
+  /* ---------- no-zoom guards ---------- */
+  #app, #app * { touch-action: manipulation; }
+  #app input, #app textarea { font-size: 16px; }
+  #app {
+    position: relative;
+    margin: 0 auto;
+    max-width: 480px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #92c17f;
+    background-image: url("https://user.uploads.dev/file/47505d1c987670d24534c6a985929352.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.45);
+  }
+  @media (max-width: 520px) {
+    body { background: #92c17f; }
+    #app { box-shadow: none; }
+  }
+
+  /* ---------- header ---------- */
+  #topbar {
+    background: #4c7ca4;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 6px 8px 2px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 30;
+  }
+  #topLeft { display: flex; align-items: center; }
+  #topRight { display: flex; align-items: center; position: relative; }
+  .iconBtn {
+    background: none;
+    border: none;
+    color: #fff !important;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    padding: 0;
+  }
+  .iconBtn:hover { background: rgba(255, 255, 255, 0.14); }
+  #peer { display: flex; align-items: center; gap: 10px; }
+  #avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 25%, #ffa258, #ef6c1c);
+    color: #fff;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    user-select: none;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+  }
+  #iconBtn {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    border: 2px solid #4c7ca4;
+    background: #fff;
+    color: #4c7ca4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 6;
+  }
+  #iconBtn svg { display: block; }
+  #iconBtn:hover { background: #e6f0f8; }
+  #peerInfo { line-height: 1.25; min-width: 0; }
+  #titleRow { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  #chatTitle { font-size: 16px; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #titleEditBtn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  #titleEditBtn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+  #onlineSub { font-size: 12.5px; opacity: 0.85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- multi-select toolbar (replaces header in selection mode) ---------- */
+  #selBar { display: none; flex: 1; align-items: center; gap: 8px; min-width: 0; }
+  #app.selMode #topLeft, #app.selMode #topRight { display: none !important; }
+  #app.selMode #selBar { display: flex; }
+  #selCount { font-size: 14px; font-weight: 700; letter-spacing: 0.2px; white-space: nowrap; }
+  .selTools { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+  .selTool {
+    background: none; border: none; color: #fff; width: 40px; height: 40px;
+    border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; flex-shrink: 0;
+  }
+  .selTool svg { display: block; }
+  .selTool:hover { background: rgba(255, 255, 255, 0.18); }
+  .selTool.danger:hover { background: rgba(255, 255, 255, 0.2); color: #ffc2ba; }
+  .selTool.hide { display: none !important; }
+
+  /* selection-mode message states */
+  #app.selMode .msg:not(.selected) { opacity: 0.35; }
+  #app.selMode .msg.selected .bubble { box-shadow: 0 0 0 2.5px #2678b6; position: relative; }
+  #app.selMode .msg.selected .bubble::after {
+    content: "\2713"; position: absolute; top: -11px; right: -11px; z-index: 5;
+    width: 22px; height: 22px; border-radius: 50%; background: #2678b6; color: #fff;
+    font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px #fff; line-height: 1;
+  }
+  #app.selMode .bubble > button { display: none !important; }
+
+
+  /* ---------- 3-dot menu ---------- */
+  #menuPop {
+    position: absolute;
+    top: 52px;
+    right: 8px;
+    background: #fff;
+    color: #333;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    padding: 6px 0;
+    min-width: 190px;
+    z-index: 60;
+  }
+  .popItem { padding: 11px 18px; font-size: 14px; cursor: pointer; }
+  .popItem:hover { background: #eef2f7; }
+  .popItem.danger { color: #e53935; }
+  .popItem:first-child { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+  .popItem:last-child { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+
+  /* ---------- header translate popup ---------- */
+  #translatePop {
+    position: absolute;
+    top: 52px;
+    right: 58px;
+    background: #fff;
+    color: #333;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    padding: 12px 12px 8px;
+    width: 240px;
+    z-index: 60;
+  }
+  #translatePop .tpopRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  #translatePop .tpopLabel { font-size: 14px; font-weight: 600; }
+  #translatePop .tpopLangTitle { font-size: 12px; color: #90a4ae; text-transform: uppercase; letter-spacing: .4px; margin: 2px 0 6px; }
+  #translatePop .tpopGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; max-height: 48vh; overflow-y: auto; }
+  #translatePop .tpopGrid button { border: 1px solid #d7dce2; background: #f4f7fa; color: #333; border-radius: 8px; padding: 8px 7px; font-size: 12.5px; cursor: pointer; font-family: inherit; text-align: left; }
+  #translatePop .tpopGrid button.active { background: #2678b6; color: #fff; border-color: #2678b6; }
+  .switch { position: relative; width: 44px; height: 24px; border-radius: 999px; border: none; background: #cfd6dd; cursor: pointer; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .switch.on { background: #2678b6; }
+  .switch.on::after { left: 23px; }
+
+  /* ---------- messages ---------- */
+  #scrollCtn { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+  #messagesEl {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 9px 8px;
+  }
+  .sep, .sys span {
+    background: rgba(110, 128, 143, 0.88);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    padding: 3px 14px;
+    border-radius: 999px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  }
+  .sep { align-self: center; margin: 3px 0 7px; }
+  .unreadBanner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    align-self: center;
+    background: #fff;
+    color: #2678b6;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    margin: 2px 0 9px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    user-select: none;
+    animation: unreadIn 0.3s ease-out;
+  }
+  .unreadBanner svg { display: block; color: #90a4ae; }
+  @keyframes unreadIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  .sys { align-self: center; margin: 2px 0; }
+  .sys span { display: inline-block; }
+  .delnote {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    background: #1f6f5c;
+    color: #fff;
+    font-size: 13px;
+    font-style: italic;
+    padding: 7px 12px;
+    border-radius: 12px 12px 12px 4px;
+    margin: 3px 0 3px 14px;
+    max-width: 85%;
+  }
+  .delnote .dnIcon { display: flex; flex-shrink: 0; opacity: 0.9; }
+  #messagesEl > .msg, #messagesEl > .sys, #messagesEl > .sep, #messagesEl > .delnote {
+    animation: msgIn 0.28s ease-out;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  .msg { display: flex; }
+  .msg.out { justify-content: flex-end; }
+  .bubble {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-width: 79%;
+    padding: 7px 12px 6px 12px;
+    font-size: 16px;
+    line-height: 1.3125;
+    color: #111;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .msg.in .bubble {
+    background: #ffffff;
+    border-radius: 5px 16px 16px 16px;
+    box-shadow: 0 1px 2px rgba(16, 35, 47, 0.15);
+    padding: 8px 12px 7px 13px;
+  }
+  .msg.out .bubble {
+    background: #e3f2fe;
+    border-radius: 16px 5px 16px 16px;
+    box-shadow: 0 1px 2px rgba(16, 35, 47, 0.15);
+    padding: 8px 13px 7px 12px;
+  }
+  .msg.grouped { margin-top: -3px; }
+  .msg.in.grouped .bubble, .msg.out.grouped .bubble { border-radius: 16px; }
+  .senderName {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0 0 3px 0;
+  }
+  .btext {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    padding-bottom: 1px;
+  }
+  .tsrow {
+    align-self: flex-end;
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1;
+    color: #707579;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .msg.out .tsrow { color: #7a9eb8; }
+  .msg.out .tsrow svg { color: #2678b6; }
+
+  /* ---------- message action buttons (reply / edit / delete / flag / ban / info / download) ---------- */
+  .replyBtn, .editBtn, .delBtn, .flagBtn, .banBtn, .infoBtn, .unbanBtn, .dlBtn, .verBtn {
+    position: absolute;
+    top: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.6);
+    color: #9fb2c0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.13s;
+  }
+  .msg:hover .bubble .replyBtn,
+  .msg:hover .bubble .editBtn,
+  .msg:hover .bubble .delBtn,
+  .msg:hover .bubble .flagBtn,
+  .msg:hover .bubble .banBtn,
+  .msg:hover .bubble .infoBtn,
+  .msg:hover .bubble .unbanBtn,
+  .msg:hover .bubble .dlBtn,
+  .msg.actions-on .bubble .replyBtn,
+  .msg.actions-on .bubble .editBtn,
+  .msg.actions-on .bubble .delBtn,
+  .msg.actions-on .bubble .flagBtn,
+  .msg.actions-on .bubble .banBtn,
+  .msg.actions-on .bubble .infoBtn,
+  .msg.actions-on .bubble .unbanBtn,
+  .msg.actions-on .bubble .dlBtn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .imgBubble .dlBtn { top: auto; bottom: 8px; right: 8px; background: rgba(255,255,255,0.85); color: #444; }
+  .imgBubble .dlBtn:hover { background: rgba(255,255,255,1); color: #1559c4; }
+  .replyBtn { right: 4px; }
+  .editBtn { right: 30px; }
+  .delBtn { right: 4px; }
+  .flagBtn { right: 82px; }
+  .banBtn { right: 108px; }
+  .infoBtn { right: 134px; }
+  .unbanBtn { right: 108px; }
+  .verBtn { right: 160px; }
+  .verBtn { background: rgba(38, 120, 182, 0.08); color: #4f86c4; }
+  .verBtn:hover { background: rgba(38, 120, 182, 0.16); color: #2567d9; }
+  .bubble.with-edit .replyBtn { right: 56px; }
+  .bubble.with-del.with-reply:not(.with-edit) .replyBtn { right: 30px; }
+  .bubble:not(.with-edit) .flagBtn { right: 56px; }
+  .bubble:not(.with-edit) .banBtn, .bubble:not(.with-edit) .unbanBtn { right: 82px; }
+  .bubble:not(.with-edit) .infoBtn { right: 108px; }
+  .replyBtn:hover, .editBtn:hover { background: rgba(38, 120, 182, 0.12); color: #2678b6; }
+  .flagBtn:hover, .banBtn:hover { background: rgba(229, 57, 53, 0.12); color: #e53935; }
+  .delBtn:hover { background: rgba(209, 67, 59, 0.14); color: #d1433b; }
+  .infoBtn:hover { background: rgba(38, 120, 182, 0.12); color: #2678b6; }
+  .unbanBtn:hover { background: rgba(46, 161, 80, 0.14); color: #2ea150; }
+  .msg.out .replyBtn, .msg.out .editBtn, .msg.out .delBtn { color: #5f8fb4; }
+  .msg.out .replyBtn:hover, .msg.out .editBtn:hover { color: #2678b6; }
+  .msg.out .delBtn:hover { color: #d1433b; }
+  .voiceBubble .replyBtn, .voiceBubble .editBtn, .voiceBubble .delBtn, .voiceBubble .flagBtn, .voiceBubble .banBtn,
+  .imgBubble .replyBtn, .imgBubble .editBtn, .imgBubble .delBtn, .imgBubble .flagBtn, .imgBubble .banBtn { top: 6px; }
+  .voiceBubble .infoBtn, .voiceBubble .unbanBtn { top: 6px; }
+  .imgBubble .delBtn, .voiceBubble .delBtn { right: 6px; }
+  /* keep bubble content clear of the buttons while actions are shown */
+  .msg:hover .bubble > .senderName,
+  .msg:hover .bubble > .btext,
+  .msg:hover .bubble > .replyQuote,
+  .msg:hover .bubble > .caption,
+  .msg.actions-on .bubble > .senderName,
+  .msg.actions-on .bubble > .btext,
+  .msg.actions-on .bubble > .replyQuote,
+  .msg.actions-on .bubble > .caption {
+    padding-right: 112px;
+  }
+
+  .msg.out .editBtn { color: #5f8fb4; }
+  .msg.out .editBtn:hover { color: #2678b6; }
+
+  .btext a, .caption a, .rqText a {
+    color: #1559c4;
+    text-decoration: underline;
+    word-break: break-all;
+  }
+  .msg.out .btext a { color: #1b61c9; }
+
+  .linkPreview {
+    display: flex;
+    gap: 10px;
+    border: 1px solid rgba(127,127,127,0.25);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(128,128,128,0.06);
+    margin-top: 6px;
+    min-width: 0;
+    cursor: pointer;
+  }
+  .linkPreview .lpImg {
+    width: 64px;
+    flex-shrink: 0;
+    background: rgba(128,128,128,0.15) center/cover no-repeat;
+    min-height: 60px;
+  }
+  .linkPreview .lpBody { padding: 7px 9px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .linkPreview .lpTitle {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .linkPreview .lpDesc {
+    font-size: 12.5px;
+    color: #7a7f83;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .linkPreview .lpHost { font-size: 11.5px; color: #9aa0a5; text-transform: lowercase; }
+
+
+  /* ---------- "edited" marker ---------- */
+  .editedMark {
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+
+  /* ---------- reply quote inside bubbles ---------- */
+  .replyQuote {
+    border-left: 3px solid #2678b6;
+    padding-left: 8px;
+    margin: 0 0 5px 0;
+    cursor: pointer;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .replyQuote .rqName {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .replyQuote .rqText {
+    font-size: 13.5px;
+    color: #707579;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .msg.out .replyQuote .rqText { color: #7a9eb8; }
+  .replyQuote .rqImg {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .imgBubble .replyQuote { margin: 1px 1px 3px; padding: 2px 4px 1px 8px; }
+  .voiceBubble .replyQuote { margin-bottom: 6px; }
+
+  /* ---------- message flash (reply navigation) ---------- */
+  .msg.flash { animation: flashMsg 1.1s ease-out; border-radius: 12px; }
+  @keyframes flashMsg {
+    0% { background: rgba(38, 120, 182, 0.24); }
+    100% { background: transparent; }
+  }
+
+  .msg.out .delBtn { color: #5f8fb4; }
+  .voiceBubble .delBtn, .imgBubble .delBtn { top: 6px; right: 6px; }
+
+  /* ---------- image bubbles ---------- */
+  .bubble.imgBubble { padding: 3px; }
+  .bubble.imgBubble img {
+    display: block;
+    max-width: 100%;
+    max-height: 380px;
+    width: auto;
+    height: auto;
+    object-fit: cover;
+    border-radius: 11px;
+  }
+  .imgBubble .tsrow {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.38);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 999px;
+    line-height: 1.25;
+  }
+  .imgBubble .tsrow svg { color: #fff !important; }
+  .imgBubble .tsrow.tsrow-flat {
+    position: static;
+    background: none;
+    color: #707579;
+    padding: 0;
+    margin: 4px 0 1px;
+  }
+  .msg.out .imgBubble .tsrow.tsrow-flat { color: #7a9eb8; }
+  .msg.out .imgBubble .tsrow.tsrow-flat svg { color: #2678b6; }
+  .imgBubble .caption {
+    padding: 6px 10px 4px;
+    font-size: 15px;
+    line-height: 1.3;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* ---------- voice bubbles ---------- */
+  .bubble.voiceBubble { padding: 8px 10px 5px 9px; min-width: 210px; }
+  .voiceTop { display: flex; align-items: center; gap: 9px; }
+  .playBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #2678b6;
+    color: #fff !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .playBtn:hover { background: #20689f; }
+  .playBtn:active { transform: scale(0.94); }
+  .playBtn svg { margin-left: 2px; }
+  .playBtn.playing svg { margin-left: 0; }
+  .wave {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 24px;
+    min-width: 0;
+  }
+  .wave span {
+    width: 3px;
+    border-radius: 2px;
+    background: #9bc4e2;
+    flex-shrink: 0;
+    transform-origin: bottom;
+  }
+  .wave span.played {
+    background: #4f97c7;
+    animation: barBob 0.7s ease-in-out infinite alternate;
+  }
+  @keyframes barBob {
+    from { transform: scaleY(0.5); }
+    to { transform: scaleY(1.15); }
+  }
+  .voiceMeta {
+    font-size: 12px;
+    color: #5f97b9;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .unreadDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2678b6;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+  .voiceBubble .tsrow { margin-top: 2px; padding-top: 2px; }
+
+  /* ---------- uploading placeholder ---------- */
+  .uploadBubble {
+    background: #e3f2fe;
+    border-radius: 16px 5px 16px 16px;
+    box-shadow: 0 1px 2px rgba(16, 35, 47, 0.15);
+    padding: 9px 12px 8px;
+  }
+  .uploadImgBox {
+    width: 190px;
+    height: 130px;
+    border-radius: 11px;
+    background: #d6e7f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .uploadVoiceRow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 210px;
+  }
+  .upPlaceholderCircle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #bcd7ec;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .upBars {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 22px;
+    flex: 1;
+  }
+  .upBars span {
+    width: 3px;
+    border-radius: 2px;
+    background: #9bc4e2;
+    transform-origin: bottom;
+    animation: barBob 0.7s ease-in-out infinite alternate;
+  }
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 3px solid rgba(38, 120, 182, 0.22);
+    border-top-color: #2678b6;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .miniSpinner {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(38, 120, 182, 0.25);
+    border-top-color: #2678b6;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  .upText {
+    font-size: 12px;
+    color: #5f97b9;
+    margin-top: 7px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ---------- nickname / clear modals ---------- */
+  #nickModal.force #nickCancelBtn { display: none; }
+  #nickModal.force .cardTitle { font-size: 17px; }
+
+  /* ---------- caption modal ---------- */
+  .capCard { width: 320px; }
+  #capImg {
+    width: 100%;
+    max-height: 240px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+    margin-bottom: 10px;
+    background: #eef2f5;
+  }
+  .modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 80;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 18px 14px;
+    width: 284px;
+    color: #222;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  }
+  .cardTitle { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  .cardDesc { font-size: 13.5px; color: #5c6670; line-height: 1.45; margin-bottom: 4px; }
+  .card a {
+    display: inline-block;
+    margin: 6px 0 2px;
+    color: #2678b6;
+    font-size: 14px;
+    font-weight: 600;
+    word-break: break-all;
+  }
+  .card input {
+    width: 100%;
+    border: 1px solid #d7dce2;
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+    color: #111;
+    background: #fff;
+  }
+  .card input:focus { border-color: #4aa3df; }
+  .card textarea {
+    width: 100%;
+    border: 1px solid #d7dce2;
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+    color: #111;
+    background: #fff;
+    resize: none;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .card textarea:focus { border-color: #4aa3df; }
+  #nickPassInput { margin-top: 8px; }
+
+  /* ---------- group icon modal ---------- */
+  #iconModal .cardBtns { flex-direction: column; align-items: stretch; gap: 6px; margin-top: 12px; }
+  #iconModal .cardBtns button {
+    background: #fff;
+    border: 1px solid #d7dce2;
+    border-radius: 9px;
+    color: #222 !important;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 12px;
+    width: 100%;
+    text-align: center;
+  }
+  #iconModal .cardBtns button:hover { background: #f0f4f8; }
+  #iconModal .cardBtns button.dangerBtn { color: #e53935 !important; }
+
+  /* ---------- terms and conditions modal ---------- */
+  /* ---------- interaction gate (blocks the app until age + T&C accepted) ---------- */
+  #gateOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 85;
+    background: transparent;
+  }
+  #tacModal { z-index: 90; }
+  #ageModal { z-index: 96; }
+  .tacCard { width: 320px; max-height: 80vh; display: flex; flex-direction: column; }
+  .tacBody { overflow-y: auto; font-size: 13.5px; line-height: 1.55; color: #444; margin: 2px 0 4px; }
+
+  /* ---------- translate language picker ---------- */
+  .langGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 55vh; overflow-y: auto; margin: 2px 0 10px; }
+  .langGrid button { border: 1px solid #d7dce2; background: #f4f7fa; color: #333; border-radius: 9px; padding: 9px 8px; font-size: 13.5px; cursor: pointer; font-family: inherit; text-align: left; }
+  .langGrid button.active { background: #2678b6; color: #fff; border-color: #2678b6; }
+  .btext.translated + .transTog { margin-top: 4px; }
+  .transTog { font-size: 11.5px; color: #8a94a0; cursor: pointer; user-select: none; }
+  .msg.out .transTog { color: #9fc3e2; }
+  .transTog:hover { text-decoration: underline; }
+
+  .onlineCard { width: 260px; max-height: 70vh; display: flex; flex-direction: column; }
+  .onlineBody { overflow-y: auto; font-size: 14px; margin: 2px 0 6px; }
+  .onlineUser { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid #eef1f4; cursor: pointer; border-radius: 8px; }
+  .onlineUser:last-child { border-bottom: none; }
+  .onlineUser:hover { background: #f0f6fc; }
+  .onlineUser .olAvatar { width: 32px; height: 32px; border-radius: 50%; background: #2678b6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; text-transform: uppercase; }
+  .onlineUser .olAvatar.adminAvatar { background: linear-gradient(135deg, #d4a017, #a87900); }
+  .onlineUser .olName { font-weight: 600; color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .onlineUser .olTag { margin-left: auto; font-size: 11px; color: #d4a017; font-weight: 700; flex-shrink: 0; }
+  .onlineUser .olMain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .onlineUser .olTop { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .onlineUser .olNet { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #78909c; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .onlineUser .olBadge { font-family: inherit; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 20px; letter-spacing: .3px; }
+  .onlineUser .olBadge.vpn { background: #fde8e8; color: #c62828; }
+  .onlineUser .olCode { opacity: .85; }
+  .onlineModal .olLegend { padding: 8px 6px 2px; font-size: 11px; color: #90a4ae; }
+
+  #onlineSub.adminOn { cursor: pointer; }
+  #onlineSub.adminOn:hover { text-decoration: underline; }
+  .infoNone { color: #9aa5ad; font-style: italic; }
+
+  /* ---------- admin golden badge ---------- */
+  .adminBadgeWrap {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 5px;
+    flex-shrink: 0;
+  }
+  .adminBadgeWrap svg {
+    display: block;
+    filter: drop-shadow(0 0 3px rgba(255, 200, 0, 0.7));
+    animation: badgeShine 2.2s ease-in-out infinite;
+  }
+  @keyframes badgeShine {
+    0% { filter: drop-shadow(0 0 2px rgba(255, 200, 0, 0.5)); transform: scale(1); }
+    50% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 1)); transform: scale(1.12); }
+    100% { filter: drop-shadow(0 0 2px rgba(255, 200, 0, 0.5)); transform: scale(1); }
+  }
+  .senderName .adminBadgeWrap { margin-left: 5px; }
+  .rqName .adminBadgeWrap { margin-left: 4px; }
+  .verifiedBadgeWrap {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 5px;
+    flex-shrink: 0;
+  }
+  .verifiedBadgeWrap svg {
+    display: block;
+    filter: drop-shadow(0 0 2px rgba(64, 130, 255, 0.45));
+  }
+  .onlineUser .olTop .verifiedBadgeWrap svg { width: 14px; height: 14px; }
+
+  /* ---------- admin golden message outline ---------- */
+  .bubble.adminMsg {
+    border: 1.5px solid #e2b33c;
+    box-shadow: 0 0 0 1px rgba(226, 179, 60, 0.4), 0 0 12px rgba(255, 200, 0, 0.3);
+  }
+  .bubble.adminMsg.imgBubble { padding: 4px; }
+  .bubble.adminMsg.voiceBubble { border-color: #d9a02a; }
+
+  /* ---------- add to home screen ---------- */
+  #installBody { font-size: 14px; color: #444; line-height: 1.5; text-align: left; }
+  #installBody .ibHead { font-weight: 700; color: #222; font-size: 15px; margin-top: 4px; }
+  #installBody .istep { display: flex; gap: 10px; margin: 12px 0; align-items: flex-start; }
+  #installBody .istep .num { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  #installBody .istep .txt { color: #555; }
+  #installBtn { margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  #installBtn:hover { background: #1d4ed8; }
+
+  /* ---------- flagged message (red outline) ---------- */
+  .msg .bubble.flagged {
+    box-shadow: 0 0 0 2.5px #e53935;
+  }
+
+  /* ---------- banned user chip ---------- */
+  .bannedChip {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: #e53935;
+    background: rgba(229, 57, 53, 0.1);
+    border: 1px solid rgba(229, 57, 53, 0.45);
+    border-radius: 6px;
+    padding: 0 5px;
+    line-height: 1.6;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .cardBtns { display: flex; justify-content: flex-end; gap: 4px; margin-top: 16px; }
+  .cardBtns button {
+    background: none;
+    border: none;
+    color: #3a9dd8 !important;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .cardBtns button:hover { background: #e8f2fb; }
+  .cardBtns button.dangerBtn { color: #e53935 !important; }
+  .cardBtns button.dangerBtn:hover { background: #fdeaea; }
+
+  /* ---------- reply bar (above compose) ---------- */
+  #replyBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #d3dde6;
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    margin: 0 10px -10px;
+    padding: 8px 6px 10px 14px;
+    position: relative;
+    z-index: 3;
+    animation: replyBarIn 0.18s ease-out;
+  }
+  #replyBar.hide { display: none; }
+  @keyframes replyBarIn {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #replyQuote {
+    flex: 1;
+    min-width: 0;
+    border-left: 3px solid #2678b6;
+    padding-left: 9px;
+    cursor: pointer;
+  }
+  #replyName {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #2678b6;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #replySnippet {
+    font-size: 13px;
+    color: #707579;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #replyCloseBtn {
+    background: none;
+    border: none;
+    color: #9aa5ad;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  #replyCloseBtn:hover { background: #eceef1; color: #5a646d; }
+
+  /* ---------- edit bar (above compose) ---------- */
+  #editBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #d3dde6;
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    margin: 0 10px -10px;
+    padding: 8px 6px 10px 14px;
+    position: relative;
+    z-index: 3;
+    animation: replyBarIn 0.18s ease-out;
+  }
+  #editBar.hide { display: none; }
+  #editQuote {
+    flex: 1;
+    min-width: 0;
+    border-left: 3px solid #2678b6;
+    padding-left: 9px;
+  }
+  #editLabel {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #2678b6;
+    line-height: 1.25;
+  }
+  #editSnippet {
+    font-size: 13px;
+    color: #707579;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #editCloseBtn {
+    background: none;
+    border: none;
+    color: #9aa5ad;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  #editCloseBtn:hover { background: #eceef1; color: #5a646d; }
+
+  /* ---------- compose bar ---------- */
+  #composeBar {
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 10px 11px;
+    flex-shrink: 0;
+  }
+  #field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #d3dde6;
+    border-radius: 999px;
+    padding: 0 4px 0 6px;
+    min-width: 0;
+    height: 48px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+  #msgInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: #111;
+    padding: 9px 2px;
+    min-width: 0;
+  }
+  #msgInput::placeholder { color: #a2acb4; }
+  .cIcon {
+    background: none;
+    border: none;
+    color: #707579 !important;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .cIcon:hover { background: #eceef1; color: #5a646d !important; }
+
+  /* ---------- recording bar ---------- */
+  #recBar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #d3dde6;
+    border-radius: 999px;
+    padding: 0 4px 0 18px;
+    min-width: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+  #recDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e53935;
+    animation: recPulse 1s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes recPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.82); }
+  }
+  #recTime {
+    font-size: 15.5px;
+    color: #77838f;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+    margin-left: 9px;
+  }
+  #recCancelBtn {
+    margin-left: auto;
+    margin-right: 44px;
+    background: none;
+    border: none;
+    color: #4a9fd4;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 9px 6px;
+  }
+  #recCancelBtn:hover { color: #3a8dbe; }
+
+  /* ---------- round buttons (mic / send) ---------- */
+  .roundBtn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    color: #fff !important;
+  }
+  #micBtn { background: #2678b6; }
+  #micBtn:hover { background: #20689f; }
+  #sendBtn {
+    width: 48px;
+    height: 48px;
+    background: #229af0;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.22);
+  }
+  #sendBtn:hover { background: #1d8ad8; }
+  #sendBtn:active { transform: scale(0.93); }
+
+  /* ---------- scroll to bottom button ---------- */
+  #scrollDownBtn {
+    position: absolute;
+    right: 14px;
+    bottom: 86px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    color: #4b9fd7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    z-index: 40;
+  }
+  #scrollDownBtn:hover { background: #eef6fc; }
+  #scrollDownBtn:active { transform: scale(0.94); }
+
+  #unreadChipBtn {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 82px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    background: #2678b6;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+    z-index: 40;
+    white-space: nowrap;
+  }
+  #unreadChipBtn:hover { background: #1e659b; }
+  #unreadChipBtn:active { transform: translateX(-50%) scale(0.96); }
+  #unreadChipBtn.hide { display: none; }
+
+  /* ---------- toast ---------- */
+  #toast {
+    position: absolute;
+    left: 50%;
+    bottom: 78px;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    z-index: 90;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: 80%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #toast:not(.hide) {
+    animation: toastIn 0.22s ease-out;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="gateOverlay" class="show"></div>
+  <header id="topbar">
+    <div id="topLeft">
+      <button id="backBtn" class="iconBtn" title="Back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div id="peer">
+        <div id="avatar"><span id="avatarLetter">C</span>
+          <button id="iconBtn" class="hide" title="Change group icon" aria-label="Change group icon">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3"/></svg>
+          </button>
+        </div>
+        <div id="peerInfo">
+          <div id="titleRow">
+            <div id="chatTitle">Chat Room</div>
+            <button id="titleEditBtn" class="hide" title="Edit chat title" aria-label="Edit chat title">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>
+            </button>
+          </div>
+          <div id="onlineSub">connecting…</div>
+        </div>
+      </div>
+    </div>
+    <div id="topRight">
+      <button id="translateHeaderBtn" class="iconBtn" title="Translate" aria-label="Translate">
+        <svg viewBox="0 0 52 52" width="22" height="22" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M39,18.67H35.42l-4.2,11.12A29,29,0,0,1,20.6,24.91a28.76,28.76,0,0,0,7.11-14.49h5.21a2,2,0,0,0,0-4H19.67V2a2,2,0,1,0-4,0V6.42H2.41a2,2,0,0,0,0,4H7.63a28.73,28.73,0,0,0,7.1,14.49A29.51,29.51,0,0,1,3.27,30a2,2,0,0,0,.43,4,1.61,1.61,0,0,0,.44-.05,32.56,32.56,0,0,0,13.53-6.25,32,32,0,0,0,12.13,5.9L22.83,52H28l2.7-7.76H43.64L46.37,52h5.22Zm-15.3-8.25a23.76,23.76,0,0,1-6,11.86,23.71,23.71,0,0,1-6-11.86Zm8.68,29.15,4.83-13.83L42,39.57Z"></path></svg>
+      </button>
+      <button id="menuBtn" class="iconBtn" title="More" aria-label="More">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
+      </button>
+      <div id="translatePop" class="hide">
+        <div class="tpopRow">
+          <span class="tpopLabel">Translate</span>
+          <button id="tpopToggle" class="switch"></button>
+        </div>
+        <div class="tpopLangTitle">Translate to</div>
+        <div class="tpopGrid"></div>
+      </div>
+      <div id="menuPop" class="hide">
+        <div class="popItem" id="nickItem">Change nickname</div>
+        <div class="popItem" id="soundItem">Sounds: On</div>
+        <div class="popItem" id="notifyItem">Notifications: Off</div>
+        <div class="popItem" id="translateItem">Translate: Off</div>
+        <div class="popItem" id="langItem">Translate to: English</div>
+        <div class="popItem" id="installItem">Add to Home Screen</div>
+        <div class="popItem danger" id="clearItem">Clear chat</div>
+      </div>
+    </div>
+    <div id="selBar">
+      <button id="selCloseBtn" class="iconBtn selIcon" title="Cancel selection" aria-label="Cancel selection">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <span id="selCount">0 selected</span>
+      <div class="selTools">
+        <button id="selCopyBtn" class="selTool" title="Copy" aria-label="Copy"></button>
+        <button id="selReplyBtn" class="selTool" title="Reply" aria-label="Reply"></button>
+        <button id="selVerBtn" class="selTool" title="Verify" aria-label="Verify"></button>
+        <button id="selFlagBtn" class="selTool" title="Flag" aria-label="Flag"></button>
+        <button id="selInfoBtn" class="selTool" title="Info" aria-label="Info"></button>
+        <button id="selBanBtn" class="selTool" title="Ban" aria-label="Ban"></button>
+        <button id="selDelBtn" class="selTool danger" title="Delete" aria-label="Delete"></button>
+      </div>
+    </div>
+  </header>
+
+  <div id="scrollCtn">
+    <div id="messagesEl">
+      <div class="sep">TODAY</div>
+    </div>
+  </div>
+
+  <div id="nickModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Your nickname</div>
+      <input id="nickInput" maxlength="20" placeholder="Nickname" autocomplete="off">
+      <input id="nickPassInput" type="password" class="hide" maxlength="40" placeholder="Admin password" autocomplete="off">
+      <div class="cardBtns">
+        <button id="nickCancelBtn">Cancel</button>
+        <button id="nickOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="langModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Translate to</div>
+      <div class="langGrid" id="langGrid"></div>
+      <div class="cardBtns">
+        <button id="langCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="captionModal" class="modal hide">
+    <div class="card capCard">
+      <div class="cardTitle">Add a caption</div>
+      <img id="capImg" alt="Selected image">
+      <textarea id="capInput" maxlength="300" rows="2" placeholder="Caption (optional)…" autocomplete="off"></textarea>
+      <div class="cardBtns">
+        <button id="capCancelBtn">Cancel</button>
+        <button id="capSendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="clearModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Clear all chats</div>
+      <div class="cardDesc">This permanently deletes the conversation history for everyone.</div>
+      <div class="cardBtns">
+        <button id="clearCancelBtn">Cancel</button>
+        <button id="clearOkBtn" class="dangerBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Delete message</div>
+      <div class="cardDesc" id="delDesc">This message will be deleted for everyone in the chat.</div>
+      <div class="cardBtns">
+        <button id="delOkBtn" class="dangerBtn">Delete</button>
+        <button id="delSilentBtn" class="hide">Delete without trace</button>
+        <button id="delCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bannedModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">You are banned</div>
+      <div class="cardDesc">You have been permanently banned from this chat. Bans are final and cannot be appealed.</div>
+      <div class="cardBtns">
+        <button id="bannedOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="installModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Add to Home Screen</div>
+      <div id="installBody"></div>
+      <button id="installBtn" class="hide">Install</button>
+      <div class="cardBtns">
+        <button id="installCancelBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="titleModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Edit chat title</div>
+      <input id="titleInput" maxlength="60" placeholder="Chat title" autocomplete="off">
+      <div class="cardBtns">
+        <button id="titleCancelBtn">Cancel</button>
+        <button id="titleOkBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="iconModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Change group icon</div>
+      <div class="cardDesc" id="iconDesc">Upload a new icon for this chat.</div>
+      <input type="file" id="iconInput" accept="image/*" hidden>
+      <div class="cardBtns">
+        <button id="iconUploadBtn">Upload new icon</button>
+        <button id="iconRemoveBtn" class="dangerBtn">Remove icon</button>
+      </div>
+      <div class="cardBtns">
+        <button id="iconCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tacModal" class="modal tacModal hide">
+    <div class="card tacCard">
+      <div class="cardTitle">Terms and Conditions</div>
+      <div class="tacBody" id="tacBody">
+        By using this chat you agree to the following terms:<br><br>
+        • This is a public chat — everything you post is visible to everyone.<br>
+        • Be respectful. No harassment, abuse, hate speech, or threats.<br>
+        • No spam, flooding, scams, or advertising.<br>
+        • Do not share others' personal information without consent.<br>
+        • Your approximate location (city/region/country, based on your IP) is visible to the admin.<br>
+        • No illegal, adult, or harmful content.<br>
+        • The admin may delete any message at any time.<br>
+        • The admin may ban any user permanently, without warning and without appeal.<br>
+        • Bans are final — there is no unban or appeal process.<br>
+        • If you break these rules, you will be permanently banned from this chat.<br><br>
+        By tapping "I Agree" you accept these terms and agree to follow them.
+      </div>
+      <div class="cardBtns">
+        <button id="tacAgreeBtn">I Agree</button>
+        <button id="tacDeclineBtn" class="dangerBtn">Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="onlineModal" class="modal hide">
+    <div class="card onlineCard">
+      <div class="cardTitle" id="onlineTitle">Online</div>
+      <div class="onlineBody" id="onlineBody">Loading…</div>
+      <div class="cardBtns">
+        <button id="onlineCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ageModal" class="modal hide">
+    <div class="card ageCard">
+      <div class="cardTitle">Are you 18 or older?</div>
+      <div class="cardDesc">This chat is for adults 18+ only and may contain mature content.</div>
+      <div class="cardBtns">
+        <button id="ageYesBtn">Yes, I'm 18+</button>
+        <button id="ageNoBtn" class="dangerBtn">No</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="replyBar" class="hide">
+    <div id="replyQuote">
+      <div id="replyName"></div>
+      <div id="replySnippet"></div>
+    </div>
+    <button id="replyCloseBtn" title="Cancel reply" aria-label="Cancel reply">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div id="editBar" class="hide">
+    <div id="editQuote">
+      <div id="editLabel">Editing message</div>
+      <div id="editSnippet"></div>
+    </div>
+    <button id="editCloseBtn" title="Cancel edit" aria-label="Cancel edit">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div id="composeBar">
+    <div id="field">
+      <button id="attachBtn" class="cIcon" title="Attach" aria-label="Attach">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5L12.5 20a5.5 5.5 0 0 1-7.8-7.8L14 3a3.5 3.5 0 0 1 5 5L9.5 17.5A1.7 1.7 0 0 1 7 15L16.5 5.5"/></svg>
+      </button>
+      <input id="msgInput" placeholder="Message" maxlength="500" autocomplete="off">
+      <button id="emojiBtn" class="cIcon" title="Emoji" aria-label="Emoji">
+        <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.4s1.2 1.9 3.5 1.9 3.5-1.9 3.5-1.9"/><circle cx="9" cy="9.6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="9.6" r="1" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </div>
+    <div id="recBar" class="hide">
+      <span id="recDot"></span>
+      <span id="recTime">0:00,0</span>
+      <button id="recCancelBtn">CANCEL</button>
+    </div>
+    <button id="micBtn" class="roundBtn" title="Voice message" aria-label="Voice message">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <button id="sendBtn" class="roundBtn send hide" title="Send" aria-label="Send">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+
+  <button id="scrollDownBtn" class="hide" title="Scroll to bottom" aria-label="Scroll to bottom">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v14"/><path d="M5.5 11.5L12 18l6.5-6.5"/></svg>
+  </button>
+
+  <button id="unreadChipBtn" class="hide" aria-label="Jump to unread messages">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6"/><path d="M5.5 12.5L12 6l6.5 6.5"/></svg>
+    <span id="unreadChipLabel">Unread messages</span>
+  </button>
+
+  <div id="toast" class="hide"></div>
+  <input type="file" id="imgInput" accept="image/*" hidden>
+</div>
+
+<script type="module" src="./client.js"></script>
+</body>
+</html>
