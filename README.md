@@ -91,6 +91,13 @@ PWA, and the 18+ gate.
 
 - **Messages don't appear live / online list stuck on "offline".** You almost
   certainly haven't run `SETUP.sql` — realtime is only enabled by that step.
+- **"Couldn't send" / "http_404" toast when sending.** The client posts to
+  `/api`, which `vercel.json` rewrites to the `api/app.js` function. If you
+  deployed before this rewrite existed, re-deploy the latest code — otherwise
+  every send 404s while reads (which go straight to Supabase) still work.
+- **"server not configured" error.** Set `SUPABASE_URL` and
+  `SUPABASE_SERVICE_KEY` in Vercel (Project → Settings → Environment
+  Variables) and redeploy. Admin actions also need the service key.
 - **"Upload failed".** Make sure the SQL step ran; it creates the storage
   buckets and upload policies.
 - **Admin actions fail.** Check that `SUPABASE_SERVICE_KEY` is set in Vercel —

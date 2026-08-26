@@ -1,3 +1,4 @@
 {
-  "functions": { "api/app.js": { "maxDuration": 10 } }
+  "functions": { "api/app.js": { "maxDuration": 10 } },
+  "rewrites": [{ "source": "/api", "destination": "/api/app" }]
 }

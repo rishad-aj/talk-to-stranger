@@ -1435,7 +1435,11 @@ const SB_H = { apikey: SUPABASE_ANON, Authorization: "Bearer " + SUPABASE_ANON, 
 async function api(action, payload = {}) {
   try {
     const r = await fetch(API_BASE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ action }, payload)) });
-    return await r.json();
+    const ct = (r.headers.get("content-type") || "");
+    let data = {};
+    if (ct.includes("json")) { try { data = await r.json(); } catch (e) { data = {}; } }
+    if (!r.ok && !data.error) data.error = "http_" + r.status;
+    return data;
   } catch (e) { return { error: "network" }; }
 }
 async function fetchHistory() {
@@ -1525,9 +1529,11 @@ function sendChat() {
   const ts = Date.now();
   addUploadPlaceholder("text", { text, replyTo: replyToMsg });
   api("post", { sender: myName, type: "chat", text, reply_to: replyToMsg ? String(replyToMsg.id || "") : null, ts }).then((r) => {
-    if (r && r.error === "banned") {
-      showBannedModal();
-      removeUploadPlaceholder(uploadPlaceholders[0]);
+    if (r && r.error) {
+      const ph = uploadPlaceholders.find((p) => !p.done);
+      removeUploadPlaceholder(ph);
+      if (r.error === "banned") showBannedModal();
+      else toast("Couldn't send: " + r.error);
     }
   });
   clearReply();
@@ -1635,9 +1641,10 @@ async function sendVoice() {
     if (!url) { removeUploadPlaceholder(ph); toast("Upload failed"); return; }
     const vts = Date.now();
     api("post", { sender: myName, type: "voice", url, dur, size: blob.size, reply_to: replyToMsg ? String(replyToMsg.id || "") : null, ts: vts }).then((r) => {
-      if (r && r.error === "banned") {
-        showBannedModal();
+      if (r && r.error) {
         removeUploadPlaceholder(ph);
+        if (r.error === "banned") showBannedModal();
+        else toast("Couldn't send: " + r.error);
       }
     });
     clearReply();
@@ -1988,7 +1995,13 @@ capSendBtn.addEventListener("click", async () => {
       new Promise((_, reject) => setTimeout(() => reject(new Error("upload timeout")), 30000))
     ]);
     if (!url) { removeUploadPlaceholder(ph); toast("Upload failed"); return; }
-    api("post", { sender: myName, type: "img", url, text: caption || null, reply_to: replyToMsg ? String(replyToMsg.id || "") : null, ts: Date.now() });
+    api("post", { sender: myName, type: "img", url, text: caption || null, reply_to: replyToMsg ? String(replyToMsg.id || "") : null, ts: Date.now() }).then((r) => {
+      if (r && r.error) {
+        removeUploadPlaceholder(ph);
+        if (r.error === "banned") showBannedModal();
+        else toast("Couldn't send: " + r.error);
+      }
+    });
     clearReply();
   } catch (e) {
     removeUploadPlaceholder(ph);
@@ -2007,7 +2020,10 @@ function sendGif(url) {
   if (!url) return;
   if (!myName) { toast("Not connected yet — try again in a moment"); return; }
   const u = String(url).trim().slice(0, 500);
-  api("post", { sender: myName, type: "img", url: u, text: null, reply_to: replyToMsg ? String(replyToMsg.id || "") : null, ts: Date.now() });
+  api("post", { sender: myName, type: "img", url: u, text: null, reply_to: replyToMsg ? String(replyToMsg.id || "") : null, ts: Date.now() }).then((r) => {
+    if (r && r.error === "banned") showBannedModal();
+    else if (r && r.error) toast("Couldn't send: " + r.error);
+  });
   if (replyToMsg) { clearReply(); }
   updateSendBtn();
 }

@@ -20,18 +20,33 @@ INSERT INTO public.settings (key, value) VALUES ('icon', '') ON CONFLICT (key) D
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verified ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "public read settings" ON public.settings FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "public read bans" ON public.bans FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "public read verified" ON public.verified FOR SELECT USING (true);
+-- (PostgreSQL has no CREATE POLICY IF NOT EXISTS; the DO blocks make it idempotent.)
+DO $$ BEGIN
+  CREATE POLICY "public read settings" ON public.settings FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public read bans" ON public.bans FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public read verified" ON public.verified FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 4) messages: make sure the old app's public read/insert/update/delete still
 --    work (this is how the current Perchance version stores history). If RLS was
 --    never enabled on messages these policies simply match the previous behaviour.
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "public select messages" ON public.messages FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "public insert messages" ON public.messages FOR INSERT WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "public update messages" ON public.messages FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "public delete messages" ON public.messages FOR DELETE USING (true);
+DO $$ BEGIN
+  CREATE POLICY "public select messages" ON public.messages FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public insert messages" ON public.messages FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public update messages" ON public.messages FOR UPDATE USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public delete messages" ON public.messages FOR DELETE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 5) Enforce bans in the DATABASE: a banned nickname can never insert a message,
 --    no matter which client or path tries to (covers both the old and new app).
@@ -69,9 +84,15 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Allow anonymous uploads into these three buckets (files are public).
-CREATE POLICY IF NOT EXISTS "public upload images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'images');
-CREATE POLICY IF NOT EXISTS "public upload voice" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'voice');
-CREATE POLICY IF NOT EXISTS "public upload icons" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'icons');
+DO $$ BEGIN
+  CREATE POLICY "public upload images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'images');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public upload voice" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'voice');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "public upload icons" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'icons');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Done. Next: copy your Supabase URL + anon key + service role key into the Vercel
 -- project (see README.md). The anon key is already baked into index.html/client.js.
