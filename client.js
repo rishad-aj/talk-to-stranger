@@ -1433,14 +1433,24 @@ function handleMessage(m) {
 
 const SB_H = { apikey: SUPABASE_ANON, Authorization: "Bearer " + SUPABASE_ANON, "Content-Type": "application/json", Prefer: "return=minimal" };
 async function api(action, payload = {}) {
-  try {
-    const r = await fetch(API_BASE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ action }, payload)) });
-    const ct = (r.headers.get("content-type") || "");
-    let data = {};
-    if (ct.includes("json")) { try { data = await r.json(); } catch (e) { data = {}; } }
-    if (!r.ok && !data.error) data.error = "http_" + r.status;
-    return data;
-  } catch (e) { return { error: "network" }; }
+  const body = JSON.stringify(Object.assign({ action }, payload));
+  const attempt = async (base) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const r = await fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body, signal: ctrl.signal });
+      const ct = (r.headers.get("content-type") || "");
+      let data = {};
+      if (ct.includes("json")) { try { data = await r.json(); } catch (e) { data = {}; } }
+      if (!r.ok && !data.error) data.error = "http_" + r.status;
+      return { ok: true, data };
+    } catch (e) {
+      return { ok: false };
+    } finally { clearTimeout(timer); }
+  };
+  let a = await attempt(API_BASE);
+  if (!a.ok && API_BASE !== "/api/app") a = await attempt("/api/app");
+  return a.ok ? a.data : { error: "network" };
 }
 async function fetchHistory() {
   try {
@@ -1861,8 +1871,8 @@ function connect() {
     if (status === "SUBSCRIBED") {
       myChannelReady = true;
       reconnectFails = 0;
-      await loadState();
       await loadHistory();
+      await Promise.race([loadState(), new Promise((r) => setTimeout(r, 6000))]);
       if (savedNick && !savedNickApplied) {
         if (savedNick === "admin") {
           const r = await api("login", { password: savedAdminPass });
