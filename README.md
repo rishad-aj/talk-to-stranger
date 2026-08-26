@@ -64,15 +64,15 @@ URL. Add your own domain under **Project → Settings → Domains** if you want.
 
 ## Admin password
 
-Your existing admin password from the Perchance version **still works** — the
-same password hash is embedded in `api/app.js`, so you don't need to change
-anything. Log in as name `admin` with your password, as before.
+Log in as name `admin` with the admin password. The current hash in `api/app.js`
+is the source of truth (it was reset on [2026-08-26], so the old password no
+longer works).
 
 To rotate the password later:
 
 ```js
 // paste into a browser console, or use any online sha256 tool:
-// 4b0cb7d092e40e08a3b89691888b63b1bc4ebf0352f9b49399b11845f1d09b38  == sha256( yourPassword )
+// 35bf0047d2a86919beab5867fbe0d7a61c0fdddfd75732104d1fb2a698507c44  == sha256( yourPassword )
 ```
 
 then replace the `ADMIN_HASH` value in `api/app.js` (or set an `ADMIN_HASH`
