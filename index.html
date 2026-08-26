@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#4c7ca4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Chat Room">
@@ -203,13 +203,26 @@
   .switch.on::after { left: 23px; }
 
   /* ---------- messages ---------- */
-  #scrollCtn { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+  #scrollCtn { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; position: relative; }
   #messagesEl {
     display: flex;
     flex-direction: column;
     gap: 5px;
     padding: 10px 9px 8px;
   }
+  #chatLoader {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 12;
+    pointer-events: none;
+  }
+  #chatLoader .spinner { width: 34px; height: 34px; border-width: 4px; }
+  #chatLoader .clText { font-size: 13.5px; color: #5c6670; letter-spacing: 0.3px; font-weight: 600; }
   .sep, .sys span {
     background: rgba(110, 128, 143, 0.88);
     color: #fff;
@@ -862,10 +875,10 @@
   #installBody { font-size: 14px; color: #444; line-height: 1.5; text-align: left; }
   #installBody .ibHead { font-weight: 700; color: #222; font-size: 15px; margin-top: 4px; }
   #installBody .istep { display: flex; gap: 10px; margin: 12px 0; align-items: flex-start; }
-  #installBody .istep .num { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  #installBody .istep .num { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: #4c7ca4; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
   #installBody .istep .txt { color: #555; }
-  #installBtn { margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
-  #installBtn:hover { background: #1d4ed8; }
+  #installBtn { margin-top: 14px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4c7ca4; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  #installBtn:hover { background: #3f6c93; }
 
   /* ---------- flagged message (red outline) ---------- */
   .msg .bubble.flagged {
@@ -1180,6 +1193,45 @@
   #unreadChipBtn:active { transform: translateX(-50%) scale(0.96); }
   #unreadChipBtn.hide { display: none; }
 
+  /* ---------- install app banner ---------- */
+  #installBannerBtn {
+    position: absolute;
+    left: 14px;
+    bottom: 82px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 8px 9px 14px;
+    border-radius: 999px;
+    border: none;
+    background: #4c7ca4;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+    z-index: 40;
+    white-space: nowrap;
+    animation: installIn 0.3s ease-out;
+  }
+  #installBannerBtn:hover { background: #3f6c93; }
+  #installBannerBtn.hide { display: none; }
+  #installBannerBtn .ibClose {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
+  }
+  #installBannerBtn .ibClose:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  @keyframes installIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* ---------- toast ---------- */
   #toast {
     position: absolute;
@@ -1277,6 +1329,10 @@
   <div id="scrollCtn">
     <div id="messagesEl">
       <div class="sep">TODAY</div>
+    </div>
+    <div id="chatLoader">
+      <div class="spinner"></div>
+      <div class="clText">Loading chat…</div>
     </div>
   </div>
 
@@ -1479,6 +1535,14 @@
   <button id="unreadChipBtn" class="hide" aria-label="Jump to unread messages">
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6"/><path d="M5.5 12.5L12 6l6.5 6.5"/></svg>
     <span id="unreadChipLabel">Unread messages</span>
+  </button>
+
+  <button id="installBannerBtn" class="hide" aria-label="Install app">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+    <span>Install app</span>
+    <span id="installBannerCloseBtn" class="ibClose" title="Dismiss" aria-label="Dismiss">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </span>
   </button>
 
   <div id="toast" class="hide"></div>

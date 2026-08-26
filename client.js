@@ -18,8 +18,10 @@ const clearedKey = "tgCleared_chat";
 let clearedAt = Number(lsGet(clearedKey)) || 0;
 const lastSeenKey = "tgLastSeen_chat";
 let lastSeenAt = Number(lsGet(lastSeenKey)) || 0;
-function markSeen() { if (document.visibilityState !== "hidden") lsSet(lastSeenKey, String(Date.now())); }
-setInterval(markSeen, 5000);
+function markSeen() { lsSet(lastSeenKey, String(Date.now())); }
+setInterval(() => { if (document.visibilityState !== "hidden") markSeen(); }, 5000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") markSeen(); });
+window.addEventListener("pagehide", () => markSeen());
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
 
 const messagesEl = document.getElementById("messagesEl");
@@ -142,7 +144,10 @@ const scrollDownBtn = document.getElementById("scrollDownBtn");
 function updateScrollBtn() {
   scrollDownBtn.classList.toggle("hide", scrollCtnEl.scrollHeight - scrollCtnEl.scrollTop - scrollCtnEl.clientHeight < 60);
 }
-scrollCtnEl.addEventListener("scroll", updateScrollBtn);
+scrollCtnEl.addEventListener("scroll", () => {
+  updateScrollBtn();
+  if (scrollCtnEl.scrollHeight - scrollCtnEl.scrollTop - scrollCtnEl.clientHeight < 60) markSeen();
+});
 function animateScrollTo(targetTop) {
   const start = scrollCtnEl.scrollTop;
   const delta = targetTop - start;
@@ -1702,6 +1707,20 @@ function getMyIPLocation() {
 let historyLoaded = false;
 let historyInProgress = false;
 const pendingInserts = [];
+const chatLoader = document.getElementById("chatLoader");
+function hideChatLoader() { if (chatLoader) chatLoader.classList.add("hide"); }
+setTimeout(() => { if (!historyLoaded) hideChatLoader(); }, 15000);
+
+function scrollToLatest() {
+  const b = messagesEl.querySelector(".unreadBanner");
+  if (b) {
+    b.scrollIntoView({ block: "start", behavior: "auto" });
+  } else {
+    scrollCtnEl.scrollTop = scrollCtnEl.scrollHeight;
+  }
+  updateScrollBtn();
+}
+window.addEventListener("load", () => setTimeout(scrollToLatest, 400));
 let reconnectFails = 0;
 let dbReady = null;
 async function probeDbReady() {
@@ -1821,13 +1840,17 @@ async function loadHistory() {
       } catch (e) { console.error("render-sb-row", row && row.id, e); }
     }
     historyLoaded = true;
+    hideChatLoader();
     for (const mm of pendingInserts.splice(0)) {
       if (!findWrapById(mm.id)) addMessageDom(mm);
     }
     if (translateOn) retranslateAll();
     const unreadCount = addNewMsgsBanner();
     if (unreadCount) showUnreadChip(unreadCount);
-    scrollBottom(true);
+    scrollToLatest();
+    setTimeout(scrollToLatest, 300);
+    setTimeout(scrollToLatest, 1000);
+    setTimeout(scrollToLatest, 2500);
     msgInput.focus();
   } finally {
     historyInProgress = false;
@@ -2058,8 +2081,38 @@ nickItem.addEventListener("click", () => {
 nickCancelBtn.addEventListener("click", () => nickModal.classList.add("hide"));
 
 /* ---------- add to home screen ---------- */
+const installItem = document.getElementById("installItem");
+const installModal = document.getElementById("installModal");
+const installBody = document.getElementById("installBody");
+const installBtn = document.getElementById("installBtn");
+const installCancelBtn = document.getElementById("installCancelBtn");
+const installBannerBtn = document.getElementById("installBannerBtn");
+const installBannerCloseBtn = document.getElementById("installBannerCloseBtn");
+
 let deferredPrompt = null;
-window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredPrompt = e; });
+let installBannerDismissed = false;
+function hideInstallBanner() { installBannerBtn.classList.add("hide"); }
+function maybeShowInstallBanner() {
+  if (!deferredPrompt || installBannerDismissed) return;
+  if (window.matchMedia("(display-mode: standalone)").matches) return;
+  installBannerBtn.classList.remove("hide");
+}
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredPrompt = e; maybeShowInstallBanner(); });
+window.addEventListener("appinstalled", () => { deferredPrompt = null; hideInstallBanner(); });
+installBannerBtn.addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+  const p = deferredPrompt;
+  deferredPrompt = null;
+  hideInstallBanner();
+  p.prompt();
+  try { await p.userChoice; } catch (e) {}
+});
+installBannerCloseBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  installBannerDismissed = true;
+  hideInstallBanner();
+});
+window.addEventListener("load", () => setTimeout(maybeShowInstallBanner, 2500));
 function stepNum(n, txt) {
   const row = el("div", "istep");
   row.appendChild(el("div", "num", String(n)));
