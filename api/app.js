@@ -14,7 +14,7 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-const ADMIN_HASH = process.env.ADMIN_HASH || "4b0cb7d092e40e08a3b89691888b63b1bc4ebf0352f9b49399b11845f1d09b38";
+const ADMIN_HASH = process.env.ADMIN_HASH || "35bf0047d2a86919beab5867fbe0d7a61c0fdddfd75732104d1fb2a698507c44";
 
 const MAX_TEXT = 500;
 const MAX_NAME = 20;
