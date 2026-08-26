@@ -69,7 +69,13 @@ function sha256(s) {
 function json(status, obj) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
   });
 }
 
@@ -98,10 +104,32 @@ function loginOk(password) {
   return sha256(String(password || "")) === ADMIN_HASH;
 }
 
+function readBody(req) {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (c) => { data += c; });
+    req.on("end", () => { try { resolve(JSON.parse(data || "{}")); } catch (e) { resolve({}); } });
+    req.on("error", () => resolve({}));
+  });
+}
+
 export default async function handler(req) {
   try {
-    const url = new URL(req.url);
-    const ip = (req.headers.get("x-forwarded-for") || "?").split(",")[0].trim();
+    const rawUrl = String(req.url || "");
+    let url;
+    try { url = new URL(rawUrl); }
+    catch (e) { url = new URL(rawUrl, "http://localhost"); }
+    const hdrs = req.headers || {};
+    const getHeader = (k) => (typeof hdrs.get === "function" ? hdrs.get(k) : hdrs[k]) || "";
+    const ip = (getHeader("x-forwarded-for") || "?").split(",")[0].trim();
+
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
+    }
+
+    if (!SUPABASE_URL || !SERVICE_KEY) {
+      return json(500, { error: "server not configured: missing SUPABASE_URL / SUPABASE_SERVICE_KEY env vars in Vercel" });
+    }
 
     if (req.method === "GET" && url.searchParams.get("action") === "state") {
       const [title, icon, bans, verified] = await Promise.all([
@@ -119,7 +147,10 @@ export default async function handler(req) {
     }
 
     if (req.method !== "POST") return json(405, { error: "method" });
-    const body = await req.json().catch(() => ({}));
+    let body = {};
+    try {
+      body = typeof req.json === "function" ? await req.json() : await readBody(req);
+    } catch (e) { body = {}; }
     const action = body.action || "";
 
     if (action === "post") {
