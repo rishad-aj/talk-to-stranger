@@ -3,10 +3,16 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const STATE_BYTES = 50 * 1024 * 1024;
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+function ensureDir(d) {
+  try { fs.mkdirSync(d, { recursive: true }); return true; }
+  catch (e) { return false; }
+}
+let DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+if (!ensureDir(DATA_DIR)) DATA_DIR = path.join(__dirname, "data");
+ensureDir(DATA_DIR);
 const STATE_FILE = path.join(DATA_DIR, "state.bin");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
-for (const d of [DATA_DIR, UPLOAD_DIR]) fs.mkdirSync(d, { recursive: true });
+ensureDir(UPLOAD_DIR);
 function loadState() {
   let buf = Buffer.alloc(STATE_BYTES);
   try {
