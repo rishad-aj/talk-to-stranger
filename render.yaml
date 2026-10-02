@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: chat-room
-    runtime: node
-    plan: free
-    buildCommand: npm install && npm run export
-    startCommand: npm start
