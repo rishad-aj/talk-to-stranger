@@ -5,6 +5,3 @@ services:
     plan: free
     buildCommand: npm install && npm run export
     startCommand: npm start
-    envVars:
-      - key: DATA_DIR
-        value: /var/chatdata
