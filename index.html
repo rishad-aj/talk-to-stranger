@@ -1,0 +1,486 @@
+<script src="/js/head.js"></script>
+
+<div id="app">
+<script src="/js/compat.js"></script>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><clipPath id="msgTail" clipPathUnits="userSpaceOnUse"><path d="M7 0 L7 15 A10 10 0 0 1 -3 25 L4 25 A16 14 0 0 0 20 11 L20 0 Z"/></clipPath></defs></svg>
+  <div id="gateOverlay" class="show"></div>
+  <header id="topbar">
+    <div id="topLeft">
+      <button id="backBtn" class="iconBtn" title="Back" aria-label="Back">
+        <span class="abBar abBarTop"></span>
+        <span class="abBar abBarBottom"></span>
+        <span id="backBadge" class="hide">0</span>
+      </button>
+      <div id="peer">
+        <div id="avatar"><span id="avatarLetter">C</span>
+          <button id="iconBtn" class="hide" title="Change group icon" aria-label="Change group icon">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3"/></svg>
+          </button>
+        </div>
+        <div id="peerInfo">
+          <div id="titleRow">
+            <div id="chatTitle">[title]</div>
+            <button id="titleEditBtn" class="hide" title="Edit chat title" aria-label="Edit chat title">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>
+            </button>
+            <button id="adminEyeBtn" class="hide" title="View as this user" aria-label="View as this user">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div id="onlineSub">connecting…</div>
+        </div>
+      </div>
+    </div>
+    <div id="topRight">
+      <button id="translateHeaderBtn" class="iconBtn" title="Translate" aria-label="Translate">
+        <svg viewBox="0 0 52 52" width="22" height="22" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M39,18.67H35.42l-4.2,11.12A29,29,0,0,1,20.6,24.91a28.76,28.76,0,0,0,7.11-14.49h5.21a2,2,0,0,0,0-4H19.67V2a2,2,0,1,0-4,0V6.42H2.41a2,2,0,0,0,0,4H7.63a28.73,28.73,0,0,0,7.1,14.49A29.51,29.51,0,0,1,3.27,30a2,2,0,0,0,.43,4,1.61,1.61,0,0,0,.44-.05,32.56,32.56,0,0,0,13.53-6.25,32,32,0,0,0,12.13,5.9L22.83,52H28l2.7-7.76H43.64L46.37,52h5.22Zm-15.3-8.25a23.76,23.76,0,0,1-6,11.86,23.71,23.71,0,0,1-6-11.86Zm8.68,29.15,4.83-13.83L42,39.57Z"></path></svg>
+      </button>
+      <button id="menuBtn" class="iconBtn" title="More" aria-label="More">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
+      </button>
+      <div id="translatePop" class="hide">
+        <div class="tpopRow">
+          <span class="tpopLabel">Translate</span>
+          <button id="tpopToggle" class="switch"></button>
+        </div>
+        <div class="tpopLangTitle">Translate to</div>
+        <div class="tpopGrid"></div>
+      </div>
+      <div id="textSizePop" class="hide">
+        <div class="tpopRow"><span class="tpopLabel">Text size</span></div>
+        <div class="tsizeGrid">
+          <button data-size="s">Small</button>
+          <button data-size="m" class="active">Medium</button>
+          <button data-size="l">Large</button>
+        </div>
+      </div>
+      <div id="menuPop" class="hide">
+        <div class="popItem" id="nickItem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 21v-1.8a3.7 3.7 0 0 0-3.7-3.7H8.2a3.7 3.7 0 0 0-3.7 3.7V21"/><circle cx="12" cy="7.2" r="3.7"/><path d="M20.2 9.3l1.6 1.6-4.1 4.1h-1.6v-1.6z"/></svg>
+          <span class="popLabel">Edit profile</span>
+        </div>
+        <div class="popItem" id="themeItem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <span class="popLabel">Theme: Light</span>
+        </div>
+        <div class="popItem" id="soundItem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="popLabel">Sound &amp; notifications: On</span>
+        </div>
+        <div class="popItem" id="translateItem">
+          <svg viewBox="0 0 52 52" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M39,18.67H35.42l-4.2,11.12A29,29,0,0,1,20.6,24.91a28.76,28.76,0,0,0,7.11-14.49h5.21a2,2,0,0,0,0-4H19.67V2a2,2,0,1,0-4,0V6.42H2.41a2,2,0,0,0,0,4H7.63a28.73,28.73,0,0,0,7.1,14.49A29.51,29.51,0,0,1,3.27,30a2,2,0,0,0,.43,4,1.61,1.61,0,0,0,.44-.05,32.56,32.56,0,0,0,13.53-6.25,32,32,0,0,0,12.13,5.9L22.83,52H28l2.7-7.76H43.64L46.37,52h5.22Zm-15.3-8.25a23.76,23.76,0,0,1-6,11.86,23.71,23.71,0,0,1-6-11.86Zm8.68,29.15,4.83-13.83L42,39.57Z"></path></svg>
+          <span class="popLabel">Translation</span>
+        </div>
+        <div class="popItem" id="textSizeItem">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4V20M17 12V20M6 20H10M15 20H19M13 7V4H3V7M21 14V12H13V14"/></svg>
+          <span class="popLabel">Text size: Medium</span>
+        </div>
+        <div class="popItem" id="installItem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M4 20h16"/></svg>
+          <span class="popLabel">Download</span>
+        </div>
+        <div class="popItem hide" id="adminItem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="M9.5 11.5l2 2 3.5-3.5"/></svg>
+          <span class="popLabel">Admin panel</span>
+        </div>
+        <div class="popItem danger" id="clearItem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+          <span class="popLabel">Clear chat</span>
+        </div>
+      </div>
+    </div>
+    <div id="selBar">
+      <button id="selCloseBtn" class="iconBtn selIcon" title="Cancel selection" aria-label="Cancel selection">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <span id="selCount">0 selected</span>
+      <div class="selHdrActions">
+        <button id="actReplyBtn" class="hdrTool" title="Reply" aria-label="Reply"></button>
+        <button id="actCopyBtn" class="hdrTool" title="Copy" aria-label="Copy"></button>
+        <button id="actEditBtn" class="hdrTool" title="Edit" aria-label="Edit"></button>
+        <button id="actDelBtn" class="hdrTool danger" title="Delete" aria-label="Delete"></button>
+      </div>
+    </div>
+  </header>
+
+  <div id="scrollCtn">
+    <div id="olderLoader" class="hide"><span class="miniSpinner"></span><span>Loading older messages…</span></div>
+    <div id="messagesEl"><div id="stickyDateWrap"><div id="stickyDate" class="hide"></div></div></div>
+  </div>
+
+  <div id="dmScrollCtn" class="hide">
+    <div id="dmMessagesEl"></div>
+  </div>
+
+  <div id="monitorScreen" class="hide">
+    <div id="monitorBarEl"></div>
+    <div id="monitorScrollCtn"><div id="monitorMessagesEl"></div></div>
+  </div>
+
+  <div id="peopleScreen" class="hide">
+    <div id="peopleHead">
+      <div id="peopleTitle">People</div>
+      <div id="peopleSub">Tap someone to chat privately</div>
+    </div>
+    <input id="convoFilter" type="search" placeholder="Search people…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="20">
+    <div id="peopleScroll">
+      <div id="peopleList"></div>
+    </div>
+  </div>
+
+  <div id="nickModal" class="modal hide">
+    <div class="card profileCard">
+      <div class="cardTitle">Edit profile</div>
+      <div class="profTop">
+        <div id="pfpPreview" class="pfpPreview" role="button" tabindex="0" aria-label="Upload a profile picture">?</div>
+        <div class="pfpSide">
+          <div class="pfpHint" id="pfpHint">Profile picture (optional)</div>
+          <div class="pfpBtns">
+            <button id="pfpPickBtn" type="button">Upload photo</button>
+            <button id="pfpRemoveBtn" type="button" class="dangerBtn hide">Remove</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="pfpInput" accept="image/*" hidden>
+      <input id="nickInput" maxlength="20" placeholder="Nickname" autocomplete="off">
+      <input id="nickPassInput" type="password" class="hide" maxlength="40" placeholder="Admin password" autocomplete="off">
+      <div class="cardBtns">
+        <button id="nickCancelBtn">Cancel</button>
+        <button id="nickOkBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="captionModal" class="modal hide">
+    <div class="card capCard">
+      <div class="cardTitle">Add a caption</div>
+      <img id="capImg" alt="Selected image">
+      <textarea id="capInput" maxlength="300" rows="2" placeholder="Caption (optional)…" autocomplete="off"></textarea>
+      <div class="cardBtns">
+        <button id="capCancelBtn">Cancel</button>
+        <button id="capSendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="clearModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Clear all chats</div>
+      <div class="cardDesc">This permanently deletes the conversation history for everyone.</div>
+      <div class="cardBtns">
+        <button id="clearCancelBtn">Cancel</button>
+        <button id="clearOkBtn" class="dangerBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Delete message</div>
+      <div class="cardDesc" id="delDesc">This message will be deleted for everyone in the chat.</div>
+      <div class="cardBtns">
+        <button id="delOkBtn" class="dangerBtn">Delete</button>
+        <button id="delSilentBtn" class="hide">Delete without trace</button>
+        <button id="delCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bannedModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">You are banned</div>
+      <div class="cardDesc">You have been permanently banned from this chat. Bans are final and cannot be appealed.</div>
+      <div class="cardBtns">
+        <button id="bannedOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="plogoutModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Logged out</div>
+      <div class="cardDesc" id="plogoutDesc">You were logged out. Please log in with the password.</div>
+      <div class="cardBtns">
+        <button id="plogoutOkBtn">Log in</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="regionModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle" id="regionTitle">Unavailable in India</div>
+      <div class="cardDesc" id="regionDesc">This chat isn't available in your region right now.</div>
+      <div class="cardBtns">
+        <button id="regionOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="vpnModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">VPN not allowed</div>
+      <div class="cardDesc">This chat doesn't allow VPN, proxy or datacenter connections. Turn off your VPN and reload the page to join.</div>
+      <div class="cardBtns">
+        <button id="vpnOkBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="installModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Add to Home Screen</div>
+      <div id="installBody"></div>
+      <button id="installBtn" class="hide">Install</button>
+      <div class="cardBtns">
+        <button id="installCancelBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="titleModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Edit chat title</div>
+      <input id="titleInput" maxlength="60" placeholder="Chat title" autocomplete="off">
+      <div class="cardBtns">
+        <button id="titleCancelBtn">Cancel</button>
+        <button id="titleOkBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="iconModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Change group icon</div>
+      <div class="cardDesc" id="iconDesc">Upload a new icon for this chat.</div>
+      <input type="file" id="iconInput" accept="image/*" hidden>
+      <div class="cardBtns">
+        <button id="iconUploadBtn">Upload new icon</button>
+        <button id="iconRemoveBtn" class="dangerBtn">Remove icon</button>
+      </div>
+      <div class="cardBtns">
+        <button id="iconCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tacModal" class="modal tacModal hide">
+    <div class="card tacCard">
+      <div class="cardTitle">Terms and Conditions</div>
+      <div class="tacBody" id="tacBody">
+        By using this chat you agree to the following terms:<br><br>
+        • This is a public chat — everything you post is visible to everyone.<br>
+        • Be respectful. No harassment, abuse, hate speech, or threats.<br>
+        • No spam, flooding, scams, or advertising.<br>
+        • Do not share others' personal information without consent.<br>
+        • No illegal, adult, or harmful content.<br>
+        • The admin may delete any message at any time.<br>
+        • The admin may ban any user permanently, without warning and without appeal.<br>
+        • Bans are final — there is no unban or appeal process.<br>
+        • If you break these rules, you will be permanently banned from this chat.<br><br>
+        By tapping "I Agree" you accept these terms and agree to follow them.
+      </div>
+      <div class="cardBtns">
+        <button id="tacAgreeBtn">I Agree</button>
+        <button id="tacDeclineBtn" class="dangerBtn">Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="onlineModal" class="modal hide">
+    <div class="card onlineCard">
+      <div class="cardTitle" id="onlineTitle">Online</div>
+      <div class="onlineBody" id="onlineBody">Loading…</div>
+      <div class="cardBtns">
+        <button id="onlineCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dmDelModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Delete conversation</div>
+      <div class="cardDesc" id="dmDelDesc">This deletes the whole conversation for both of you. This can't be undone.</div>
+      <div class="cardBtns">
+        <button id="dmDelOkBtn" class="dangerBtn">Delete</button>
+        <button id="dmDelCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ageModal" class="modal hide">
+    <div class="card ageCard">
+      <div class="cardTitle">Are you 18 or older?</div>
+      <div class="cardDesc">This chat is for adults 18+ only and may contain mature content.</div>
+      <div class="cardBtns">
+        <button id="ageYesBtn">Yes, I'm 18+</button>
+        <button id="ageNoBtn" class="dangerBtn">No</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="composeBar">
+    <div id="composeCol">
+    <div id="replyBar" class="hide">
+      <div id="replyQuote">
+        <div id="replyName"></div>
+        <div id="replySnippet"></div>
+      </div>
+      <button id="replyCloseBtn" title="Cancel reply" aria-label="Cancel reply">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div id="editBar" class="hide">
+      <div id="editQuote">
+        <div id="editLabel">Editing message</div>
+        <div id="editSnippet"></div>
+      </div>
+      <button id="editCloseBtn" title="Cancel edit" aria-label="Cancel edit">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div id="field">
+      <button id="attachBtn" class="cIcon" title="Attach" aria-label="Attach">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5L12.5 20a5.5 5.5 0 0 1-7.8-7.8L14 3a3.5 3.5 0 0 1 5 5L9.5 17.5A1.7 1.7 0 0 1 7 15L16.5 5.5"/></svg>
+      </button>
+      <div id="msgInput" contenteditable="true" data-placeholder="Message" role="textbox" aria-label="Message"></div>
+      <button id="gifBtn" class="cIcon" title="GIF" aria-label="GIF">
+        <svg viewBox="0 0 24 24" width="25" height="25" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.75,3.50054297 C20.5449254,3.50054297 22,4.95561754 22,6.75054297 L22,17.2531195 C22,19.048045 20.5449254,20.5031195 18.75,20.5031195 L5.25,20.5031195 C3.45507456,20.5031195 2,19.048045 2,17.2531195 L2,6.75054297 C2,4.95561754 3.45507456,3.50054297 5.25,3.50054297 L18.75,3.50054297 Z M18.75,5.00054297 L5.25,5.00054297 C4.28350169,5.00054297 3.5,5.78404466 3.5,6.75054297 L3.5,17.2531195 C3.5,18.2196178 4.28350169,19.0031195 5.25,19.0031195 L18.75,19.0031195 C19.7164983,19.0031195 20.5,18.2196178 20.5,17.2531195 L20.5,6.75054297 C20.5,5.78404466 19.7164983,5.00054297 18.75,5.00054297 Z M8.01459972,8.87193666 C8.61149825,8.87193666 9.03352891,8.95326234 9.51677386,9.18532686 C9.82793289,9.33475204 9.95904407,9.70812933 9.80961888,10.0192884 C9.6601937,10.3304474 9.28681641,10.4615586 8.97565738,10.3121334 C8.67582824,10.1681491 8.43601415,10.1219367 8.01459972,10.1219367 C7.14788947,10.1219367 6.51103525,10.9182985 6.51103525,11.9943017 C6.51103525,13.0713011 7.14873038,13.8702789 8.01459972,13.8702789 C8.44322427,13.8702789 8.80607251,13.6904125 8.99484486,13.3695045 L9.001,13.354543 L9.001,12.620543 L8.62521827,12.6211937 C8.31142012,12.6211937 8.05163513,12.3899359 8.00699487,12.0885517 L8.00021827,11.9961937 C8.00021827,11.6823956 8.23147615,11.4226106 8.53286035,11.3779703 L8.62521827,11.3711937 L9.62682145,11.3711937 C9.94061961,11.3711937 10.2004046,11.6024516 10.2450448,11.9038358 L10.2518215,11.9961937 L10.2504852,13.5438774 L10.2504852,13.5438774 L10.2441303,13.5991827 L10.2441303,13.5991827 L10.2229651,13.6890602 L10.2229651,13.6890602 L10.2024697,13.7442077 C9.82606539,14.6343365 8.96156448,15.1202789 8.01459972,15.1202789 C6.38857781,15.1202789 5.26103525,13.707564 5.26103525,11.9943017 C5.26103525,10.2816525 6.38839145,8.87193666 8.01459972,8.87193666 Z M12.6289445,8.99393497 C12.9427427,8.99393497 13.2025276,9.22519285 13.2471679,9.52657705 L13.2539445,9.61893497 L13.2539445,14.381065 C13.2539445,14.726243 12.9741225,15.006065 12.6289445,15.006065 C12.3151463,15.006065 12.0553614,14.7748072 12.0107211,14.4734229 L12.0039445,14.381065 L12.0039445,9.61893497 C12.0039445,9.273757 12.2837665,8.99393497 12.6289445,8.99393497 Z M15.6247564,8.99393489 L17.6221579,9.00083497 C17.9673338,9.00202673 18.246188,9.28281321 18.2450039,9.62798912 C18.2439132,9.94178541 18.0117595,10.2007704 17.7102229,10.2443727 L17.6178421,10.2508313 L16.247,10.245543 L16.247,11.999543 L17.37,12.0004012 C17.6837982,12.0004012 17.9435831,12.2316591 17.9882234,12.5330433 L17.995,12.6254012 C17.995,12.9391993 17.7637421,13.1989843 17.4623579,13.2436246 L17.37,13.2504012 L16.247,13.249543 L16.2475985,14.3649711 C16.2475985,14.6787693 16.0163406,14.9385543 15.7149564,14.9831945 L15.6225985,14.9899711 C15.3088003,14.9899711 15.0490154,14.7587133 15.0043751,14.4573291 L14.9975984,14.3649711 L14.9975984,9.61677709 C14.9986853,9.30298081 15.230839,9.04399582 15.5323756,9.00039353 L15.6247564,8.99393489 Z"></path></svg>
+      </button>
+      <button id="emojiBtn" class="cIcon" title="Emoji" aria-label="Emoji">
+        <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.4s1.2 1.9 3.5 1.9 3.5-1.9 3.5-1.9"/><circle cx="9" cy="9.6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="9.6" r="1" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </div>
+    <div id="fmtBar" class="hide">
+      <button type="button" class="fmtBtn b" data-fmt="bold" title="Bold" aria-label="Bold">B</button>
+      <button type="button" class="fmtBtn i" data-fmt="italic" title="Italic" aria-label="Italic">I</button>
+      <button type="button" class="fmtBtn s" data-fmt="strike" title="Strikethrough" aria-label="Strikethrough">S</button>
+      <button type="button" class="fmtBtn c" data-fmt="code" title="Code" aria-label="Code">&lt;/&gt;</button>
+    </div>
+    <div id="mentionPop" class="hide"></div>
+    <div id="recBar" class="hide">
+      <span id="recDot"></span>
+      <span id="recTime">0:00,0</span>
+      <button id="recCancelBtn">CANCEL</button>
+    </div>
+    </div>
+    <button id="micBtn" class="roundBtn" title="Voice message" aria-label="Voice message">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <button id="sendBtn" class="roundBtn send hide" title="Send" aria-label="Send">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5004 11.9998H5.00043M4.91577 12.2913L2.58085 19.266C2.39742 19.8139 2.3057 20.0879 2.37152 20.2566C2.42868 20.4031 2.55144 20.5142 2.70292 20.5565C2.87736 20.6052 3.14083 20.4866 3.66776 20.2495L20.3792 12.7293C20.8936 12.4979 21.1507 12.3822 21.2302 12.2214C21.2993 12.0817 21.2993 11.9179 21.2302 11.7782C21.1507 11.6174 20.8936 11.5017 20.3792 11.2703L3.66193 3.74751C3.13659 3.51111 2.87392 3.39291 2.69966 3.4414C2.54832 3.48351 2.42556 3.59429 2.36821 3.74054C2.30216 3.90893 2.3929 4.18231 2.57437 4.72906L4.91642 11.7853C4.94759 11.8792 4.96317 11.9262 4.96933 11.9742C4.97479 12.0168 4.97473 12.0599 4.96916 12.1025C4.96289 12.1506 4.94718 12.1975 4.91577 12.2913Z" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div id="selActionBar">
+    <button id="actVerBtn" class="actTool" title="Verify" aria-label="Verify"></button>
+    <button id="actFlagBtn" class="actTool" title="Flag" aria-label="Flag"></button>
+    <button id="actInfoBtn" class="actTool" title="Info" aria-label="Info"></button>
+    <button id="actBanBtn" class="actTool" title="Ban" aria-label="Ban"></button>
+  </div>
+  <div id="emojiPanel" class="hide">
+    <div id="emojiTabs"></div>
+    <div id="emojiScroll"><div id="emojiGrid"></div></div>
+  </div>
+
+  <div id="gifPanel" class="hide">
+    <div id="gifTop">
+      <input id="gifSearchInput" placeholder="Search GIFs…" autocomplete="off" maxlength="40">
+      <button id="gifSearchBtn">Search</button>
+    </div>
+    <div id="gifChips"></div>
+    <div id="gifScroll"><div id="gifGrid"></div></div>
+  </div>
+
+  <button id="scrollDownBtn" class="hide" title="Scroll to bottom" aria-label="Scroll to bottom">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v14"/><path d="M5.5 11.5L12 18l6.5-6.5"/></svg>
+  </button>
+  <button id="unreadChipBtn" class="hide" aria-label="Jump to unread messages">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6"/><path d="M5.5 12.5L12 6l6.5 6.5"/></svg>
+    <span id="unreadChipLabel">Unread messages</span>
+  </button>
+
+  <div id="rxBar" class="hide" role="toolbar" aria-label="React to message">
+    <div id="rxBarInner"></div>
+    <div id="rxBarTail"></div>
+  </div>
+
+  <div id="rxWhoPop" class="hide" role="dialog" aria-label="Who reacted">
+    <div id="rxWhoHead"><span id="rxWhoEmoji"></span><span id="rxWhoCount"></span></div>
+    <div id="rxWhoList"></div>
+    <div id="rxWhoTail"></div>
+  </div>
+
+  <div id="rxPick" class="hide" role="dialog" aria-label="Choose an emoji">
+    <div id="rxPickHead">
+      <input id="rxPickSearch" type="text" placeholder="Search emoji…" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div id="rxPickBody"></div>
+    <div id="rxPickTail"></div>
+  </div>
+
+  <div id="lightbox" class="hide">
+    <div id="lbBackdrop"></div>
+    <img id="lbImg" alt="Image">
+    <button id="lbCloseBtn" title="Close" aria-label="Close">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <button id="lbDlBtn" title="Download" aria-label="Download">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M4 20h16"/></svg>
+    </button>
+  </div>
+
+  <div id="adminSide" class="modal hide">
+    <div class="card asCard">
+      <div id="asHead">
+        <div id="asTitle">Admin Panel</div>
+        <button id="asCloseBtn" class="asCloseBtn" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="asBody">
+        <div class="asSection">Fake presence</div>
+        <input id="asName" maxlength="20" placeholder="Name" autocomplete="off">
+        <button id="asJoinBtn">Fake Joined</button>
+        <button id="asLeftBtn">Fake Left</button>
+        <div class="asSection">Fake user test</div>        <div id="asFakeRow">
+          <input id="asFakeName" maxlength="20" placeholder="New fake user" autocomplete="off">
+          <button id="asFakeCreateBtn">Create</button>
+        </div>
+        <div id="asFakeList"></div>
+        <div id="asFakeSendRow" class="hide">
+          <input id="asFakeMsg" maxlength="500" placeholder="Type a message…" autocomplete="off">
+          <button id="asFakeSendBtn">Send</button>
+        </div>
+        <div class="asSection">Deleted messages</div>
+        <div id="asDelRow">
+          <button id="asDelRefreshBtn">Refresh</button>
+          <button id="asDelClearBtn" class="dangerBtn">Clear archive</button>
+        </div>
+        <div id="asDelList"><div class="asHint">Loading…</div></div>
+        <div class="asHint">Every deleted room message, including ones users unsent themselves. Only you can see this.</div>
+        <div class="asSection">Private chats</div>
+        <div id="asDmRow">
+          <button id="asDmRefreshBtn">Refresh</button>
+        </div>
+        <div id="asDmList"><div class="asHint">Loading…</div></div>
+        <div id="asDmThread" class="hide"></div>
+        <div class="asHint">Every private conversation between verified users, so you can moderate it. Deleting removes a message (or the whole conversation) for both participants.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hide"></div>
+  <input type="file" id="imgInput" accept="image/*" hidden>
+</div>
+
+<!-- server code lives in server/plugin.js, executed by the node backend -->
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script type="module" src="/js/app.js"></script>
+
+    
+
+
