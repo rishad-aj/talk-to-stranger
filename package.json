@@ -1,6 +1,12 @@
 {
+  "name": "chat-room-vercel",
   "private": true,
-  "name": "chat-room",
   "version": "1.0.0",
-  "engines": { "node": "24.x" }
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
 }
