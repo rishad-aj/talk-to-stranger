@@ -2736,7 +2736,7 @@ function renderPinned(p) {
   if (!pinnedBar) return;
   if (!p) { pinnedBar.classList.add("hide"); return; }
   pinnedBar.classList.remove("hide");
-  if (pinFromEl) pinFromEl.textContent = "📌 " + (p.from || "Pinned message") + (p.by ? " • pinned by " + p.by : "");
+  if (pinFromEl) pinFromEl.textContent = (p.from || "Pinned message") + (p.by ? " • pinned by " + p.by : "");
   if (pinPreviewEl) pinPreviewEl.textContent = pinPreviewText(p);
   const canUnpin = isAdmin() || verifiedSet.has(myName);
   if (pinUnpinBtn) pinUnpinBtn.style.display = canUnpin ? "" : "none";

@@ -309,6 +309,7 @@ SupaSocket.prototype.addEventListener = function (t, l, o) { return this._et.add
 SupaSocket.prototype.removeEventListener = function (t, l, o) { return this._et.removeEventListener(t, l, o); };
 SupaSocket.prototype.dispatchEvent = function (e) { return this._et.dispatchEvent(e); };
 SupaSocket.prototype._emit = function (obj) {
+  try { if (obj && obj.t === "rename" && obj.from) { this._renameCool = this._renameCool || {}; this._renameCool[obj.from] = Date.now(); } } catch (e) {}
   var ev;
   try { ev = new MessageEvent("message", { data: JSON.stringify(obj) }); }
   catch (e) { ev = new Event("message"); ev.data = JSON.stringify(obj); }
@@ -367,8 +368,36 @@ SupaSocket.prototype._presenceNames = function () {
   } catch (e) {}
   return out;
 };
+// Join notices come from the server broadcast, but Supabase presence has no
+// server-side leave hook - so a leave is synthesized locally: a name that was
+// stably present (2+ syncs; unnamed pre-login guests never count) and vanishes
+// gets an "X left" notice. Renames and recent leaves are suppressed so a
+// rename or a flapping connection doesn't print a false leave.
 SupaSocket.prototype._presence = function () {
   var self = this;
+  try {
+    var list = self._presenceNames();
+    var cur = {}, i;
+    for (i = 0; i < list.length; i++) cur[list[i].name] = 1;
+    self._stable = self._stable || {};
+    self._renameCool = self._renameCool || {};
+    self._leftCool = self._leftCool || {};
+    var now = Date.now(), nm;
+    for (nm in cur) self._stable[nm] = (self._stable[nm] || 0) + 1;
+    for (nm in self._stable) {
+      if (!cur[nm]) {
+        if (self._stable[nm] >= 2 &&
+            (!self._renameCool[nm] || now - self._renameCool[nm] > 8000) &&
+            (!self._leftCool[nm] || now - self._leftCool[nm] > 60000)) {
+          self._leftCool[nm] = now;
+          self._emit({ t: "system", text: nm + " left", ts: now });
+        }
+        delete self._stable[nm];
+      }
+    }
+    var keys = Object.keys(self._stable);
+    if (keys.length > 200) for (i = 0; i < keys.length - 200; i++) delete self._stable[keys[i]];
+  } catch (e) {}
   metaGet("fake", []).then(function (fake) {
     var names = self._presenceNames();
     var count = names.length + (Array.isArray(fake) ? fake.length : 0);

@@ -217,8 +217,8 @@
   /* ---------- pinned message bar ---------- */
   #pinnedBar {
     display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.92);
-    border-left: 3px solid #e2b33c;
+    background: rgba(255,255,255,0.95);
+    border-left: 3px solid #2678b6;
     padding: 7px 10px; font-size: 13px; color: #333;
     cursor: pointer; flex-shrink: 0; z-index: 20;
     max-height: 64px; overflow: hidden;
@@ -226,9 +226,9 @@
     -webkit-backdrop-filter: blur(10px);
   }
   #pinnedBar.hide { display: none !important; }
-  #pinnedBar .pinIco { flex-shrink: 0; color: #b78a12; display: flex; }
+  #pinnedBar .pinIco { flex-shrink: 0; color: #2678b6; display: flex; }
   #pinnedBar .pinTxt { flex: 1; min-width: 0; line-height: 1.3; }
-  #pinnedBar .pinTxt b { display: block; font-size: 12px; color: #b78a12; }
+  #pinnedBar .pinTxt b { display: block; font-size: 12px; color: #2678b6; }
   #pinnedBar .pinTxt span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #444; }
   #pinnedBar #pinUnpinBtn {
     flex-shrink: 0; border: none; background: none; color: #8a94a0;
@@ -236,8 +236,12 @@
     display: flex; align-items: center; justify-content: center; padding: 0;
   }
   #pinnedBar #pinUnpinBtn:hover { background: rgba(0,0,0,0.07); color: #333; }
-  body.dark #pinnedBar { background: rgba(32,32,38,0.92); color: #eee; }
-  body.dark #pinnedBar .pinTxt span { color: #ccc; }
+  body.dark #pinnedBar { background: rgba(14,14,16,0.95); color: #ececf1; border-left-color: #8774e1; }
+  body.dark #pinnedBar .pinIco { color: #8774e1; }
+  body.dark #pinnedBar .pinTxt b { color: #a99bff; }
+  body.dark #pinnedBar .pinTxt span { color: #b6bcc4; }
+  body.dark #pinnedBar #pinUnpinBtn { color: #8f959d; }
+  body.dark #pinnedBar #pinUnpinBtn:hover { background: rgba(255,255,255,0.08); color: #ececf1; }
   /* ---------- 3-dot menu ---------- */
   #menuPop {
     position: absolute;
@@ -2727,8 +2731,8 @@
     background-color: #0e0e10;
     background-image: url("https://user.uploads.dev/file/e5cbf0b27158798a4cebbfe23fa914a7.jpg");
   }
-  body.dark #topbar { background: #212121; color: #f0f0f4; }
-  body.dark #iconBtn { border-color: #212121; background: #2c2c33; color: #b7b7c1; }
+  body.dark #topbar { background: #141416; color: #f0f0f4; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  body.dark #iconBtn { border-color: #141416; background: #2c2c33; color: #b7b7c1; }
   body.dark #iconBtn:hover { background: #3a3a44; color: #dcdce2; }
   body.dark #titleEditBtn, body.dark #adminEyeBtn { color: rgba(255,255,255,0.75); }
   body.dark #menuPop {
@@ -3081,7 +3085,7 @@
     font-size: 11px; font-weight: 700; line-height: 17px; text-align: center;
     box-shadow: 0 0 0 2px #4c7ca4; pointer-events: none;
   }
-  body.dark #backBadge { box-shadow: 0 0 0 2px #212121; }
+  body.dark #backBadge { box-shadow: 0 0 0 2px #141416; }
   #peopleScreen {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     background: rgba(247, 250, 252, 0.96);
@@ -3179,7 +3183,7 @@
         "side compose"
         "side panels";
     }
-    #topbar { grid-area: header; }
+    #topbar { grid-area: header; padding-left: 14px; }
     #pinnedBar { grid-area: pin; }
     #pinnedBar.hide { display: none !important; }
     #scrollCtn, #dmScrollCtn { grid-area: msgs; margin-bottom: calc(-1 * var(--compose-h, 68px)); padding-bottom: calc(var(--compose-h, 68px) + 2px); min-height: 0; }
