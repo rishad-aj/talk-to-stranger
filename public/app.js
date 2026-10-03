@@ -129,7 +129,7 @@ function protectedNameFor(v) {
   for (const p of PROTECTED_NAMES) if (p.toLowerCase() === n) return p;
   return null;
 }
-function needsPass(name) { return name === "admin" || !!protectedNameFor(name); }
+function needsPass(name) { return !!String(name || "").trim(); }
 let kvNickChecked = false;
 async function ensureKvNick() {
   if (kvNickChecked || !root.kv || !root.kv.identity) return;
@@ -6721,9 +6721,10 @@ nickInput.addEventListener("input", () => {
   const v = nickInput.value.trim();
   const wantsAdmin = /^admin$/i.test(v);
   const protName = wantsAdmin ? null : protectedNameFor(v);
-  nickPassInput.classList.toggle("hide", !(wantsAdmin || protName));
+  nickPassInput.classList.toggle("hide", !(wantsAdmin || protName || v !== ""));
   if (wantsAdmin) nickPassInput.placeholder = "Admin password";
   else if (protName) nickPassInput.placeholder = "Password for " + protName;
+  else if (v !== "") nickPassInput.placeholder = "Password";
   renderPfpPreview();
 });
 nickOkBtn.addEventListener("click", async () => {
@@ -6751,7 +6752,7 @@ nickOkBtn.addEventListener("click", async () => {
   }
   const wantsAdmin = /^admin$/i.test(name);
   const protName = wantsAdmin ? null : protectedNameFor(name);
-  const needsPassword = wantsAdmin || !!protName;
+  const needsPassword = wantsAdmin || !!protName || nickPassInput.value !== "";
   if (wantsAdmin) name = "admin";
   else if (protName) name = protName;
   if (needsPassword && !nickPassInput.value) {
@@ -6804,6 +6805,17 @@ nickOkBtn.addEventListener("click", async () => {
       nickPassInput.placeholder = wantsAdmin ? "Admin password" : "Password for " + name;
       nickPassInput.focus();
       toast(wantsAdmin ? "Enter the admin password" : "Enter the password for " + name);
+    } else if (r === "password_setup") {
+      nickPassInput.classList.remove("hide");
+      nickPassInput.placeholder = "Create a password for " + name;
+      nickPassInput.focus();
+      toast("New username — create a password for " + name);
+    } else if (r === "weak_password") {
+      toast("Password must be at least 4 characters");
+      nickPassInput.value = "";
+      nickPassInput.focus();
+    } else if (r === "db_error") {
+      toast("Accounts update needed — ask admin to run supabase.sql");
     } else if (r === "too_many_attempts") {
       toast("Too many attempts. Try again later.");
     } else if (r === "name_taken") {

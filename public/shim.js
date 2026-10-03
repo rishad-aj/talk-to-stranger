@@ -60,6 +60,34 @@ function protectedUser(name) {
   for (var i = 0; i < PROTECTED.length; i++) if (PROTECTED[i].name.toLowerCase() === ln) return PROTECTED[i];
   return null;
 }
+var DELETED_NAME = "Deleted Account";
+var BANNED_AVATAR = "https://user.uploads.dev/file/3bf59504a6ff80b5fff8a808243faf85.jpg";
+var loginAttempts = {};
+function hashPw(pw, uname) { return sha256Hex(String(uname).toLowerCase() + "\0" + pw); }
+function acctKey(u) { return encodeURIComponent(String(u).toLowerCase()); }
+function acctGet(uname) {
+  return restJson("accounts?select=username,display,pass_hash,legacy&username=eq." + acctKey(uname)).then(function (r) {
+    if (r === null || r === undefined) return null;
+    return (Array.isArray(r) && r.length) ? r[0] : false;
+  }).catch(function () { return null; });
+}
+function acctCreate(uname, display, hash) {
+  return rest("accounts", "POST", { username: String(uname).toLowerCase(), display: display, pass_hash: hash || null, legacy: !hash }).then(function (r) {
+    return r.ok;
+  }).catch(function () { return false; });
+}
+function acctSetHash(uname, hash) {
+  return rest("accounts?username=eq." + acctKey(uname), "PATCH", { pass_hash: hash, legacy: false }).then(function (r) { return r.ok; }).catch(function () { return false; });
+}
+function attemptsHit(uname) {
+  var k = String(uname).toLowerCase(), now = Date.now();
+  var rec = loginAttempts[k];
+  if (rec && now - rec.t > 60000) rec = null;
+  if (rec && rec.count >= 8) return true;
+  loginAttempts[k] = { count: (rec ? rec.count : 0) + 1, t: rec ? rec.t : now };
+  return false;
+}
+function attemptsClear(uname) { delete loginAttempts[String(uname).toLowerCase()]; }
 function hasEmoji(s) {
   return /(?:\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF]|[\u00A9\u00AE\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299\uFE0F\u200D\u20E3])/.test(s || "");
 }
@@ -595,7 +623,8 @@ SupaSocket.prototype.rpc.setName = function (data) {
   obj = obj || {};
   var name = String(obj.name || "").trim().slice(0, 20);
   var pass = String(obj.password || obj.pass || "");
-  if (!name) name = randName();
+  if (!name) return Promise.resolve("invalid");
+  if (name.toLowerCase() === DELETED_NAME.toLowerCase()) return Promise.resolve("invalid");
   if (nameHasBlacklisted(name)) return Promise.resolve("blocked_word");
   if (!nameValid(name)) return Promise.resolve("invalid");
   var uid = String(obj.uid || "").trim();
@@ -638,20 +667,71 @@ SupaSocket.prototype.rpc.setName = function (data) {
   var prot = protectedUser(name);
   if (prot) {
     if (!pass) return Promise.resolve("password_required");
-    return hashPass(pass, prot.salt).then(function (h) {
-      if (h !== prot.hash) return "wrong_password";
-      return finish(prot.name);
+    if (attemptsHit(prot.name)) return Promise.resolve("too_many_attempts");
+    return acctGet(prot.name).then(function (acct) {
+      if (acct === null) return "db_error";
+      if (acct && acct.pass_hash) {
+        return hashPw(pass, prot.name).then(function (h) {
+          if (h !== acct.pass_hash) return "wrong_password";
+          attemptsClear(prot.name);
+          return finish(acct.display || prot.name);
+        });
+      }
+      return hashPass(pass, prot.salt).then(function (h) {
+        if (h !== prot.hash) return "wrong_password";
+        return hashPw(pass, prot.name).then(function (nh) {
+          return acctCreate(prot.name, prot.name, nh).then(function () {
+            attemptsClear(prot.name);
+            return finish(prot.name);
+          });
+        });
+      });
+    }).catch(function () { return "wrong_password"; });
+  }
+  function joinChecks(nm, display) {
+    return Promise.all([metaGet("bans", []), metaGet("verified", [])]).then(function (r) {
+      var bans = Array.isArray(r[0]) ? r[0] : [];
+      for (var i = 0; i < bans.length; i++) if (bans[i] && String(bans[i].name).toLowerCase() === nm.toLowerCase()) return "banned";
+      var others = self._presenceNames().filter(function (x) { return x.name.toLowerCase() === nm.toLowerCase(); });
+      for (var j = 0; j < others.length; j++) {
+        if (!(self._myUid && others[j].uid && others[j].uid === self._myUid)) return "name_taken";
+      }
+      return finish(display || nm);
     });
   }
-  return Promise.all([metaGet("bans", []), metaGet("verified", [])]).then(function (r) {
-    var bans = Array.isArray(r[0]) ? r[0] : [];
-    for (var i = 0; i < bans.length; i++) if (bans[i] && bans[i].name === name) return "banned";
-    var others = self._presenceNames().filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); });
-    for (var j = 0; j < others.length; j++) {
-      if (!(self._myUid && others[j].uid && others[j].uid === self._myUid)) return "name_taken";
+  return acctGet(name).then(function (acct) {
+    if (acct === null) return "db_error";
+    if (!acct) {
+      if (!pass) return "password_setup";
+      if (pass.length < 4) return "weak_password";
+      return hashPw(pass, name).then(function (h) {
+        return acctCreate(name, name, h).then(function (made) {
+          if (!made) return "password_required";
+          attemptsClear(name);
+          return joinChecks(name, name);
+        });
+      });
     }
-    return finish(name);
-  }).catch(function () { return finish(name); });
+    var disp = acct.display || name;
+    if (!acct.pass_hash) {
+      if (!pass) return "password_setup";
+      if (pass.length < 4) return "weak_password";
+      return hashPw(pass, name).then(function (h) {
+        return acctSetHash(name, h).then(function (okc) {
+          if (!okc) return "db_error";
+          attemptsClear(name);
+          return joinChecks(name, disp);
+        });
+      });
+    }
+    if (!pass) return "password_required";
+    if (attemptsHit(name)) return "too_many_attempts";
+    return hashPw(pass, name).then(function (h) {
+      if (h !== acct.pass_hash) return "wrong_password";
+      attemptsClear(name);
+      return joinChecks(name, disp);
+    });
+  }).catch(function () { return "db_error"; });
 };
 SupaSocket.prototype.rpc.fakeSay = function (data) {
   var self = this;
@@ -660,10 +740,14 @@ SupaSocket.prototype.rpc.fakeSay = function (data) {
   try { d = JSON.parse(data); } catch (e) {}
   var name = String(d.name || "").trim().slice(0, 20);
   var text = String(d.text || "").trim().slice(0, 500);
-  if (!nameValid(name) || nameHasBlacklisted(name) || name === ADMIN_NAME) return Promise.resolve("invalid");
+  if (!nameValid(name) || nameHasBlacklisted(name) || name === ADMIN_NAME || name.toLowerCase() === DELETED_NAME.toLowerCase()) return Promise.resolve("invalid");
+  if (protectedUser(name)) return Promise.resolve("invalid");
   if (!text) return Promise.resolve("invalid");
   var now = Date.now();
-  return metaGet("fake", []).then(function (fake) {
+  return acctGet(name).then(function (acct) {
+    if (acct === null) return "db_error";
+    if (acct) return "invalid";
+    return metaGet("fake", []).then(function (fake) {
     fake = Array.isArray(fake) ? fake : [];
     if (fake.indexOf(name) === -1) fake.push(name);
     return metaSet("fake", fake).then(function () {
@@ -673,6 +757,7 @@ SupaSocket.prototype.rpc.fakeSay = function (data) {
       self._broad({ t: "chat", from: name, text: text, id: now + "-" + Math.floor(Math.random() * 1000), ts: now });
       self._presence();
       return "ok";
+      });
     });
   });
 };
@@ -708,14 +793,34 @@ SupaSocket.prototype.rpc.banUser = function (data) {
       if (bans.some(function (r) { return r && r.name === target; })) return "already banned";
       bans.push({ name: target });
       return metaSet("bans", bans).then(function () {
-        return metaGet("fake", []).then(function (fake) {
-          fake = Array.isArray(fake) ? fake.filter(function (x) { return x !== target; }) : [];
-          return metaSet("fake", fake).then(function () {
-            self._broad({ t: "system", text: target + " was banned", ts: Date.now() });
-            self._broad({ t: "ban", name: target, ts: Date.now() });
-            self._presence();
-            return "ok";
-          });
+        var enc = encodeURIComponent(target);
+        try {
+          rest("messages?sender=eq." + enc + "&type=not.like.dm.*", "PATCH", { sender: DELETED_NAME }).catch(function () {});
+          rest("messages?sender=eq." + enc + "&type=like.dm.*", "PATCH", { sender: DELETED_NAME }).catch(function () {});
+        } catch (e) {}
+        return Promise.all([
+          metaGet("fake", []).then(function (fake) {
+            fake = Array.isArray(fake) ? fake.filter(function (x) { return x !== target; }) : [];
+            return metaSet("fake", fake);
+          }),
+          metaGet("pfps", {}).then(function (p) {
+            p = (p && typeof p === "object") ? p : {};
+            delete p[target];
+            p[DELETED_NAME] = BANNED_AVATAR;
+            return metaSet("pfps", p);
+          }),
+          metaGet("banned_names", {}).then(function (bn) {
+            bn = (bn && typeof bn === "object") ? bn : {};
+            bn[target] = { at: Date.now(), by: self._myName };
+            return metaSet("banned_names", bn);
+          })
+        ]).then(function () {
+          self._broad({ t: "rename", from: target, to: DELETED_NAME, uid: "", ts: Date.now() });
+          self._broad({ t: "pfp", name: DELETED_NAME, url: BANNED_AVATAR });
+          self._broad({ t: "system", text: target + " was banned", ts: Date.now() });
+          self._broad({ t: "ban", name: target, ts: Date.now() });
+          self._presence();
+          return "ok";
         });
       });
     });
