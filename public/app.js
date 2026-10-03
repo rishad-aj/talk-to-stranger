@@ -217,7 +217,7 @@ const emojiBtn = document.getElementById("emojiBtn");
 const avatar = document.getElementById("avatar");
 const chatTitle = document.getElementById("chatTitle");
 const titleEditBtn = document.getElementById("titleEditBtn");
-const adminEyeBtn = document.getElementById("adminEyeBtn");
+const adminEyeBtn = null; // removed: view-as eye dropped per privacy terms
 const titleModal = document.getElementById("titleModal");
 const titleInput = document.getElementById("titleInput");
 const titleOkBtn = document.getElementById("titleOkBtn");
@@ -766,7 +766,7 @@ function applyHeader() {
     titleEditBtn.classList.add("hide");
     // Admin-only: the eye beside the peer's name puts the admin in that
     // person's shoes (see openViewAs).
-    adminEyeBtn.classList.toggle("hide", !(isAdmin() && peer && peer !== "admin"));
+    // view-as eye removed per privacy terms
   } else if (convo.mode === "monitor") {
     // The admin's read-only window into somebody else's conversation: there is
     // no profile to show and nothing of the admin's own to edit.
@@ -781,7 +781,7 @@ function applyHeader() {
     onlineSub.textContent = "private \u00b7 moderating";
     iconBtn.classList.add("hide");
     titleEditBtn.classList.add("hide");
-    adminEyeBtn.classList.add("hide");
+    // view-as eye removed per privacy terms
   } else {
     applyIcon(currentIconUrl);
     chatTitle.textContent = roomTitleText;
@@ -791,7 +791,7 @@ function applyHeader() {
       iconBtn.classList.remove("hide");
       titleEditBtn.classList.remove("hide");
     }
-    adminEyeBtn.classList.add("hide");
+    // view-as eye removed per privacy terms
   }
   syncBackIcon();
 }
@@ -943,17 +943,7 @@ function personRow(peer, info) {
   main.appendChild(el("div", "pPreview", label));
   row.appendChild(main);
   if (unread) row.appendChild(el("span", "pBadge", unread > 99 ? "99+" : String(unread)));
-  // Admin-only: the eye puts the admin in this person's shoes and shows every
-  // private conversation they are part of (openViewAs).
-  if (isAdmin() && peer !== "admin") {
-    const eye = el("button", "pEye");
-    eye.type = "button";
-    eye.title = "View as " + peer + " - read all of their private chats";
-    eye.setAttribute("aria-label", eye.title);
-    eye.innerHTML = EYE_SVG;
-    eye.addEventListener("click", (e) => { e.stopPropagation(); openViewAs(peer); });
-    row.appendChild(eye);
-  }
+  // view-as eye removed per privacy terms
   const del = el("button", "pDel");
   del.type = "button";
   del.title = "Delete conversation";
@@ -3505,6 +3495,7 @@ async function refreshAdminDmThreads() {
 // as if their account were signed in here (read-only). Complements the eye icon
 // on a row, and the per-participant eye buttons in the monitor bar.
 function openViewAs(name) {
+  return; // disabled per privacy terms: admins can no longer view-as users
   if (!isAdmin() || !name || name === myName) return;
   viewAs = String(name);
   toast("Viewing as " + viewAs);
@@ -3521,9 +3512,7 @@ function exitViewAs() {
 function renderViewAsList() {
   const who = viewAs;
   const bar = el("div", "viewAsRow");
-  const eye = el("span", "viewAsEye");
-  eye.innerHTML = EYE_SVG;
-  bar.appendChild(eye);
+
   bar.appendChild(el("span", "viewAsLabel", "Viewing as " + who));
   const exit = el("button", "viewAsExit", "Exit");
   exit.type = "button";
@@ -3542,13 +3531,6 @@ function renderViewAsList() {
 function monitorNameWithEye(who) {
   const wrap = el("span", "monitorName");
   wrap.appendChild(el("span", null, who));
-  const eye = el("button", "monitorEye");
-  eye.type = "button";
-  eye.title = "View as " + who + " - read all of their private chats";
-  eye.setAttribute("aria-label", eye.title);
-  eye.innerHTML = EYE_SVG;
-  eye.addEventListener("click", () => openViewAs(who));
-  wrap.appendChild(eye);
   return wrap;
 }
 
@@ -6914,9 +6896,7 @@ titleEditBtn.addEventListener("click", () => {
   titleModal.classList.remove("hide");
   titleInput.focus();
 });
-adminEyeBtn.addEventListener("click", () => {
-  if (convo.mode === "dm" && convo.peer) openViewAs(convo.peer);
-});
+// view-as eye removed per privacy terms
 titleCancelBtn.addEventListener("click", () => titleModal.classList.add("hide"));
 titleOkBtn.addEventListener("click", async () => {
   const v = titleInput.value.trim().slice(0, 60);
