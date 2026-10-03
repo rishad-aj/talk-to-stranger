@@ -18,7 +18,7 @@ try {
 var configReady = new Promise(function (res) {
   var done = false;
   function fin() { if (!done) { done = true; res(true); } }
-  fetch("./api/config").then(function (r) { return r.json(); }).then(function (j) {
+  fetch("/api/config").then(function (r) { return r.json(); }).then(function (j) {
     if (j && j.url && j.key) { CFG.url = j.url; CFG.key = j.key; }
     fin();
   }).catch(fin);
@@ -93,7 +93,7 @@ function hasEmoji(s) {
 }
 function nameValid(n) { return !!n && Array.from(n).length >= 4 && !hasEmoji(n); }
 var PROF = [];
-fetch("./profanity.json").then(function (r) { return r.json(); }).then(function (a) { if (Array.isArray(a)) PROF = a; }).catch(function () {});
+fetch("/profanity.json").then(function (r) { return r.json(); }).then(function (a) { if (Array.isArray(a)) PROF = a; }).catch(function () {});
 function normName(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/(.)\1+/g, "$1"); }
 function nameHasBlacklisted(name) {
   var n = normName(name);
@@ -235,6 +235,13 @@ function aiTranslate(opts) {
     texts = [sp.length > 1 ? sp[sp.length - 1].trim() : String(ins).trim()];
     batch = false;
   }
+  function sameAsInput(arr) {
+    if (!arr || !arr.length) return true;
+    for (var i = 0; i < Math.min(arr.length, texts.length); i++) {
+      if (String(arr[i] || "").trim().toLowerCase() !== String(texts[i] || "").trim().toLowerCase()) return false;
+    }
+    return true;
+  }
   function done(arr) {
     if (batch) {
       var lines = arr.map(function (t, i) { return (i + 1) + ". " + t; });
@@ -242,12 +249,12 @@ function aiTranslate(opts) {
     }
     return { text: arr[0] || texts[0] };
   }
-  return fetch("./api/translate", {
+  return fetch("/api/translate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ texts: texts, target: target })
   }).then(function (r) { return r.json(); }).then(function (j) {
-    if (j && Array.isArray(j.translations) && j.translations.length) return done(j.translations);
+    if (j && Array.isArray(j.translations) && j.translations.length && !sameAsInput(j.translations)) return done(j.translations);
     return googleDirect(texts, target).then(done);
   }).catch(function () { return googleDirect(texts, target).then(done); });
 }
@@ -450,6 +457,15 @@ SupaSocket.prototype.send = function (str) {
     self._toggleRx(m.from || null, m.ts != null ? Number(m.ts) : null, String(m.emoji || ""), m.id || null);
   } else if (m.t === "flag") {
     self._broad({ t: "flag", id: String(m.id || ""), flagged: !!m.to, from: m.from || null, mts: m.ts != null ? Number(m.ts) : null, ts: now });
+  } else if (m.t === "pin") {
+    (function () {
+      var pin = { id: String(m.id || ""), from: m.from || null, ts: m.mts != null ? Number(m.mts) : null, text: String(m.text || "").slice(0, 300), url: String(m.url || "").slice(0, 500), by: self._myName, at: now };
+      metaSet("pinned", pin).then(function () { self._broad({ t: "pin", pin: pin }); });
+    })();
+  } else if (m.t === "unpin") {
+    (function () {
+      metaSet("pinned", null).then(function () { self._broad({ t: "unpin", by: self._myName, ts: now }); });
+    })();
   } else if (m.t === "typing") {
     self._broad({ t: "typing", from: self._myName, uid: self._myUid || "" });
   } else if (m.t === "sysmsg") {
@@ -659,7 +675,7 @@ SupaSocket.prototype.rpc.setName = function (data) {
   }
   if (/^admin$/i.test(name)) {
     if (!pass) return Promise.resolve("password_required");
-    return fetch("./api/admin-login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pass }) }).then(function (r) { return r.json(); }).then(function (j) {
+    return fetch("/api/admin-login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pass }) }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) return "wrong_password";
       return finish(ADMIN_NAME);
     }).catch(function () { return "wrong_password"; });
@@ -1052,6 +1068,29 @@ SupaSocket.prototype.rpc.importDeleted = function (data) {
     return metaSet("deleted", arr).then(function () { return JSON.stringify({ added: 0, total: arr.length }); });
   });
 };
+SupaSocket.prototype.rpc.getPinned = function () {
+  return metaGet("pinned", null).then(function (p) { return JSON.stringify(p || null); });
+};
+SupaSocket.prototype.rpc.pinMessage = function (data) {
+  var self = this;
+  return metaGet("verified", []).then(function (v) {
+    var verified = Array.isArray(v) ? v : [];
+    if (self._myName !== ADMIN_NAME && verified.indexOf(self._myName) === -1) return "admin only";
+    var d = {};
+    try { d = JSON.parse(data); } catch (e) {}
+    var pin = { id: String(d.id || "").slice(0, 64), from: String(d.from || "").slice(0, 20), ts: d.ts != null ? Number(d.ts) : Date.now(), text: String(d.text || "").slice(0, 300), url: String(d.url || "").slice(0, 500), by: self._myName, at: Date.now() };
+    if (!pin.id) return "invalid";
+    return metaSet("pinned", pin).then(function () { self._broad({ t: "pin", pin: pin }); return "ok"; });
+  });
+};
+SupaSocket.prototype.rpc.unpinMessage = function () {
+  var self = this;
+  return metaGet("verified", []).then(function (v) {
+    var verified = Array.isArray(v) ? v : [];
+    if (self._myName !== ADMIN_NAME && verified.indexOf(self._myName) === -1) return "admin only";
+    return metaSet("pinned", null).then(function () { self._broad({ t: "unpin", by: self._myName, ts: Date.now() }); return "ok"; });
+  });
+};
 window.root = {
   profanity: null,
   kv: { identity: kvStore("identity") },
@@ -1060,7 +1099,7 @@ window.root = {
   ai: aiTranslate,
   createServerSocket: function () { return new SupaSocket(); }
 };
-fetch("./profanity.json").then(function (r) { return r.json(); }).then(function (a) {
+fetch("/profanity.json").then(function (r) { return r.json(); }).then(function (a) {
   PROF = Array.isArray(a) ? a : [];
   window.root.profanity = { selectAll: PROF.map(function (w) { return { evaluateItem: w }; }), getLength: PROF.length };
 }).catch(function () { window.root.profanity = { selectAll: [], getLength: 0 }; });

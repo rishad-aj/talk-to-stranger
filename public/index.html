@@ -214,6 +214,30 @@
   body.dark .actTool:hover { background: rgba(54, 54, 62, 0.88); }
 
 
+  /* ---------- pinned message bar ---------- */
+  #pinnedBar {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.92);
+    border-left: 3px solid #e2b33c;
+    padding: 7px 10px; font-size: 13px; color: #333;
+    cursor: pointer; flex-shrink: 0; z-index: 20;
+    max-height: 64px; overflow: hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  #pinnedBar.hide { display: none !important; }
+  #pinnedBar .pinIco { flex-shrink: 0; color: #b78a12; display: flex; }
+  #pinnedBar .pinTxt { flex: 1; min-width: 0; line-height: 1.3; }
+  #pinnedBar .pinTxt b { display: block; font-size: 12px; color: #b78a12; }
+  #pinnedBar .pinTxt span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #444; }
+  #pinnedBar #pinUnpinBtn {
+    flex-shrink: 0; border: none; background: none; color: #8a94a0;
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  #pinnedBar #pinUnpinBtn:hover { background: rgba(0,0,0,0.07); color: #333; }
+  body.dark #pinnedBar { background: rgba(32,32,38,0.92); color: #eee; }
+  body.dark #pinnedBar .pinTxt span { color: #ccc; }
   /* ---------- 3-dot menu ---------- */
   #menuPop {
     position: absolute;
@@ -3369,10 +3393,16 @@
         <button id="actReplyBtn" class="hdrTool" title="Reply" aria-label="Reply"></button>
         <button id="actCopyBtn" class="hdrTool" title="Copy" aria-label="Copy"></button>
         <button id="actEditBtn" class="hdrTool" title="Edit" aria-label="Edit"></button>
+        <button id="actPinBtn" class="hdrTool" title="Pin" aria-label="Pin"></button>
         <button id="actDelBtn" class="hdrTool danger" title="Delete" aria-label="Delete"></button>
       </div>
     </div>
   </header>
+  <div id="pinnedBar" class="hide">
+    <span class="pinIco"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l1 7 3 3v2H5v-2l3-3z"/><path d="M12 16v5"/></svg></span>
+    <div class="pinTxt"><b id="pinFrom">Pinned message</b><span id="pinPreview"></span></div>
+    <button id="pinUnpinBtn" title="Unpin" aria-label="Unpin"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
 
   <div id="scrollCtn">
     <div id="olderLoader" class="hide"><span class="miniSpinner"></span><span>Loading older messages…</span></div>
