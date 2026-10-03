@@ -251,6 +251,11 @@ function randName() { return "Guest" + Math.floor(1000 + Math.random() * 9000); 
 function SupaSocket() {
   var self = this;
   self._et = new EventTarget();
+  self.rpc = {};
+  Object.keys(SupaSocket.prototype.rpc).forEach(function (k) {
+    if (typeof SupaSocket.prototype.rpc[k] !== "function" || k.indexOf("__w_") === 0) return;
+    self.rpc[k] = function (a) { return SupaSocket.prototype.rpc[k].call(self, a); };
+  });
   self.readyState = 0;
   self._reconnectDone = false;
   self._myName = null;
@@ -342,22 +347,29 @@ SupaSocket.prototype._broad = function (obj) {
   return self._room.send({ type: "broadcast", event: "msg", payload: obj }).catch(function () {});
 };
 SupaSocket.prototype._inboxSend = function (name, obj) {
-  var ch = sbClient().channel("tmp-send-" + Math.random().toString(36).slice(2));
   var self = this;
-  return new Promise(function (res) {
-    var to;
+  var topic = "inbox-" + String(name).toLowerCase();
+  function via(ch) {
     try {
-      to = setTimeout(function () { try { sbClient().removeChannel(ch); } catch (e) {} res(false); }, 6000);
+      return ch.send({ type: "broadcast", event: "dm", payload: obj }).catch(function () { return "error"; });
+    } catch (e) { return Promise.resolve("error"); }
+  }
+  if (self._inbox && self._inboxName && self._inboxName.toLowerCase() === String(name).toLowerCase()) return via(self._inbox);
+  self._outbox = self._outbox || {};
+  var ch = self._outbox[topic];
+  if (ch) return via(ch);
+  ch = sbClient().channel(topic, { config: { broadcast: { self: true } } });
+  self._outbox[topic] = ch;
+  return new Promise(function (res) {
+    var done = false;
+    function fin(v) { if (!done) { done = true; res(v); } }
+    try {
       ch.subscribe(function (s) {
-        if (s === "SUBSCRIBED") {
-          clearTimeout(to);
-          ch.send({ type: "broadcast", event: "dm", payload: obj, to: name }).then(function () {
-            try { sbClient().removeChannel(ch); } catch (e) {}
-            res(true);
-          }).catch(function () { try { sbClient().removeChannel(ch); } catch (e) {} res(false); });
-        }
+        if (s === "SUBSCRIBED") { via(ch).then(fin); }
+        else if (s === "CHANNEL_ERROR" || s === "TIMED_OUT" || s === "CLOSED") { delete self._outbox[topic]; fin(false); }
       });
-    } catch (e) { res(false); }
+      setTimeout(function () { fin(false); }, 8000);
+    } catch (e) { fin(false); }
   });
 };
 SupaSocket.prototype._ensureInbox = function (name) {
@@ -832,6 +844,7 @@ SupaSocket.prototype.rpc.dmDelete = function (data) {
   });
 };
 SupaSocket.prototype.rpc.adminDmThreads = function () {
+  return Promise.resolve("[]");
   var self = this;
   if (self._myName !== ADMIN_NAME) return Promise.resolve("[]");
   return dmRowsAll().then(function (rows) {
@@ -948,82 +961,4 @@ fetch("./profanity.json").then(function (r) { return r.json(); }).then(function 
 }).catch(function () { window.root.profanity = { selectAll: [], getLength: 0 }; });
 window.root.profanity = { selectAll: [], getLength: 0 };
 
-(function diag() {
-  var logs = [];
-  var box = null;
-  function render() {
-    if (!box) return;
-    try {
-      var g = document.getElementById("gateOverlay");
-      var mods = ["tacModal", "ageModal", "nickModal", "bannedModal", "vpnModal", "regionModal"].filter(function (id) {
-        var el = document.getElementById(id);
-        return el && !el.classList.contains("hide");
-      });
-      var flags = ["tgTac_chat", "tgAdult_chat", "tgAdult_chat_blocked", "tgNick_chat"].map(function (k) {
-        var v = null;
-        try { v = localStorage.getItem(k); } catch (e) {}
-        return k.replace("tg", "").replace("_chat", "") + "=" + (v == null ? "-" : v.slice(0, 12));
-      }).join(" ");
-      box.textContent = "gate:" + (g && !g.classList.contains("hide") ? "SHOWN" : "hidden") +
-        " modals:[" + mods.join(",") + "] sock:" + (window.__sockState == null ? "?" : window.__sockState) +
-        " root:" + (window.root ? "ok" : "MISSING") + "\n" + flags + "\n" + logs.join("\n");
-    } catch (e) {}
-  }
-  function log(s) {
-    logs.push(s);
-    if (logs.length > 12) logs.shift();
-    render();
-  }
-  window.addEventListener("error", function (e) {
-    log("ERR: " + (e.message || e.error) + " @" + String(e.filename || "").split("/").pop() + ":" + (e.lineno || "?"));
-  });
-  window.addEventListener("unhandledrejection", function (e) {
-    var r = e.reason;
-    log("REJ: " + String((r && (r.message || r)) || r).slice(0, 160));
-  });
-  function boot() {
-    box = document.createElement("div");
-    box.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:2147483647;max-width:92vw;max-height:36vh;overflow:auto;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.5 monospace;padding:8px 10px;border-radius:8px;white-space:pre-wrap;";
-    document.body.appendChild(box);
-    log("diag on");
-    setInterval(render, 2000);
-    try {
-      var orig = window.root.createServerSocket;
-      window.root.createServerSocket = function () {
-        log("socket creating");
-        window.__sockState = 0;
-        var s = orig();
-        try {
-          var r = s.rpc;
-          Object.keys(r).forEach(function (k) {
-            if (typeof r[k] !== "function" || r["__w_" + k]) return;
-            r["__w_" + k] = 1;
-            var fn = r[k].bind(s);
-            r[k] = function (a) {
-              log("rpc." + k + " ...");
-              return fn(a).then(function (res) { log("rpc." + k + " -> " + String(res).slice(0, 60)); return res; }, function (e) { log("rpc." + k + " ERR " + String(e && e.message || e).slice(0, 80)); throw e; });
-            };
-          });
-        } catch (e) {}
-        if (s && s.opened && s.opened.then) s.opened.then(function () { log("socket OPEN"); }, function (er) { log("socket FAIL " + String(er && er.message || er)); });
-        return s;
-      };
-    } catch (e) {}
-    setTimeout(function () {
-      try {
-        var g = document.getElementById("gateOverlay");
-        var anyModal = ["tacModal", "ageModal", "nickModal", "bannedModal", "vpnModal", "regionModal"].some(function (id) {
-          var el = document.getElementById(id);
-          return el && !el.classList.contains("hide");
-        });
-        if (g && !g.classList.contains("hide") && !anyModal && window.__sockState === 1) {
-          var t = document.getElementById("tacModal");
-          if (t) { t.classList.remove("hide"); log("watchdog: forced terms popup"); }
-        }
-      } catch (e) {}
-    }, 6000);
-  }
-  if (document.body) boot();
-  else document.addEventListener("DOMContentLoaded", boot);
-})();
 })();
