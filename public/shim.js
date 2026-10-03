@@ -993,6 +993,18 @@ window.root.profanity = { selectAll: [], getLength: 0 };
         log("socket creating");
         window.__sockState = 0;
         var s = orig();
+        try {
+          var r = s.rpc;
+          Object.keys(r).forEach(function (k) {
+            if (typeof r[k] !== "function" || r["__w_" + k]) return;
+            r["__w_" + k] = 1;
+            var fn = r[k].bind(s);
+            r[k] = function (a) {
+              log("rpc." + k + " ...");
+              return fn(a).then(function (res) { log("rpc." + k + " -> " + String(res).slice(0, 60)); return res; }, function (e) { log("rpc." + k + " ERR " + String(e && e.message || e).slice(0, 80)); throw e; });
+            };
+          });
+        } catch (e) {}
         if (s && s.opened && s.opened.then) s.opened.then(function () { log("socket OPEN"); }, function (er) { log("socket FAIL " + String(er && er.message || er)); });
         return s;
       };
