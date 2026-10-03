@@ -293,6 +293,7 @@ SupaSocket.prototype._init = function () {
   chan.subscribe(function (status) {
     if (status === "SUBSCRIBED") {
       self.readyState = 1;
+      window.__sockState = 1;
       var g = randName();
       self._myName = g;
       chan.track({ name: g, uid: "", named: false }).then(function () {
@@ -373,6 +374,7 @@ SupaSocket.prototype.close = function () {
   try { if (this._room) sbClient().removeChannel(this._room); } catch (e) {}
   try { if (this._inbox) sbClient().removeChannel(this._inbox); } catch (e) {}
   this.readyState = 3;
+  window.__sockState = 3;
   if (!this._reconnectDone) { var ev = new Event("close"); ev.code = 1000; this.dispatchEvent(ev); }
 };
 SupaSocket.prototype.send = function (str) {
@@ -945,4 +947,66 @@ fetch("./profanity.json").then(function (r) { return r.json(); }).then(function 
   window.root.profanity = { selectAll: PROF.map(function (w) { return { evaluateItem: w }; }), getLength: PROF.length };
 }).catch(function () { window.root.profanity = { selectAll: [], getLength: 0 }; });
 window.root.profanity = { selectAll: [], getLength: 0 };
+
+(function diag() {
+  var logs = [];
+  var box = null;
+  function render() {
+    if (!box) return;
+    try {
+      var g = document.getElementById("gateOverlay");
+      var mods = ["tacModal", "ageModal", "nickModal", "bannedModal", "vpnModal", "regionModal"].filter(function (id) {
+        var el = document.getElementById(id);
+        return el && !el.classList.contains("hide");
+      });
+      box.textContent = "gate:" + (g && !g.classList.contains("hide") ? "SHOWN" : "hidden") +
+        " modals:[" + mods.join(",") + "] sock:" + (window.__sockState == null ? "?" : window.__sockState) +
+        " root:" + (window.root ? "ok" : "MISSING") + "\n" + logs.join("\n");
+    } catch (e) {}
+  }
+  function log(s) {
+    logs.push(s);
+    if (logs.length > 12) logs.shift();
+    render();
+  }
+  window.addEventListener("error", function (e) {
+    log("ERR: " + (e.message || e.error) + " @" + String(e.filename || "").split("/").pop() + ":" + (e.lineno || "?"));
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e.reason;
+    log("REJ: " + String((r && (r.message || r)) || r).slice(0, 160));
+  });
+  function boot() {
+    box = document.createElement("div");
+    box.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:2147483647;max-width:92vw;max-height:36vh;overflow:auto;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.5 monospace;padding:8px 10px;border-radius:8px;white-space:pre-wrap;";
+    document.body.appendChild(box);
+    log("diag on");
+    setInterval(render, 2000);
+    try {
+      var orig = window.root.createServerSocket;
+      window.root.createServerSocket = function () {
+        log("socket creating");
+        window.__sockState = 0;
+        var s = orig();
+        if (s && s.opened && s.opened.then) s.opened.then(function () { log("socket OPEN"); }, function (er) { log("socket FAIL " + String(er && er.message || er)); });
+        return s;
+      };
+    } catch (e) {}
+    setTimeout(function () {
+      try {
+        var g = document.getElementById("gateOverlay");
+        var anyModal = ["tacModal", "ageModal", "nickModal", "bannedModal", "vpnModal", "regionModal"].some(function (id) {
+          var el = document.getElementById(id);
+          return el && !el.classList.contains("hide");
+        });
+        if (g && !g.classList.contains("hide") && !anyModal && window.__sockState === 1) {
+          var t = document.getElementById("tacModal");
+          if (t) { t.classList.remove("hide"); log("watchdog: forced terms popup"); }
+        }
+      } catch (e) {}
+    }, 6000);
+  }
+  if (document.body) boot();
+  else document.addEventListener("DOMContentLoaded", boot);
+})();
 })();
