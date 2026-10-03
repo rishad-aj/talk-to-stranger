@@ -959,9 +959,14 @@ window.root.profanity = { selectAll: [], getLength: 0 };
         var el = document.getElementById(id);
         return el && !el.classList.contains("hide");
       });
+      var flags = ["tgTac_chat", "tgAdult_chat", "tgAdult_chat_blocked", "tgNick_chat"].map(function (k) {
+        var v = null;
+        try { v = localStorage.getItem(k); } catch (e) {}
+        return k.replace("tg", "").replace("_chat", "") + "=" + (v == null ? "-" : v.slice(0, 12));
+      }).join(" ");
       box.textContent = "gate:" + (g && !g.classList.contains("hide") ? "SHOWN" : "hidden") +
         " modals:[" + mods.join(",") + "] sock:" + (window.__sockState == null ? "?" : window.__sockState) +
-        " root:" + (window.root ? "ok" : "MISSING") + "\n" + logs.join("\n");
+        " root:" + (window.root ? "ok" : "MISSING") + "\n" + flags + "\n" + logs.join("\n");
     } catch (e) {}
   }
   function log(s) {
