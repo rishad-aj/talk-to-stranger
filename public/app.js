@@ -1508,6 +1508,7 @@ const DELNOTE_SVG = '<svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="htt
 const REPLY_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19l-7-7 7-7M2 12h13a7 7 0 0 1 7 7v1"/></svg>';
 const EDIT_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>';
 const DL_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>';
+const PIN_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l1 7 3 3v2H5v-2l3-3z"/><path d="M12 16v5"/></svg>';
 const FLAG_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 21V3.5"/><path d="M5.5 3.5h11l-2.2 4.2L16.5 12H5.5"/></svg>';
 const COPY_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
 const BAN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>';
@@ -1824,6 +1825,7 @@ function applyVerifiedToSender(sender) {
   } else if (existing) existing.remove();
 }
 function refreshVerifiedUI() {
+  try { if (pinnedMsg) renderPinned(pinnedMsg); } catch (e) {}
   for (const s of document.querySelectorAll(".senderName")) applyVerifiedToSender(s);
   for (const b of document.querySelectorAll(".bubble[data-author]")) applyAuthorOutline(b, b.dataset.author);
   const tr = document.getElementById("typingRow");
@@ -2727,6 +2729,70 @@ function restoreAllOriginal() {
 }
 updateTranslateItems();
 
+/* ---------- pinned message (admin + verified) ---------- */
+let pinnedMsg = null;
+const pinnedBar = document.getElementById("pinnedBar");
+const pinFromEl = document.getElementById("pinFrom");
+const pinPreviewEl = document.getElementById("pinPreview");
+const pinUnpinBtn = document.getElementById("pinUnpinBtn");
+function pinPreviewText(p) {
+  if (!p) return "";
+  if (p.text) return String(p.text).slice(0, 120);
+  if (p.url) return "[photo]";
+  return "";
+}
+function renderPinned(p) {
+  pinnedMsg = p || null;
+  if (!pinnedBar) return;
+  if (!p) { pinnedBar.classList.add("hide"); return; }
+  pinnedBar.classList.remove("hide");
+  if (pinFromEl) pinFromEl.textContent = "📌 " + (p.from || "Pinned message") + (p.by ? " • pinned by " + p.by : "");
+  if (pinPreviewEl) pinPreviewEl.textContent = pinPreviewText(p);
+  const canUnpin = isAdmin() || verifiedSet.has(myName);
+  if (pinUnpinBtn) pinUnpinBtn.style.display = canUnpin ? "" : "none";
+}
+if (pinnedBar) pinnedBar.addEventListener("click", (e) => {
+  if (e.target && e.target.closest && e.target.closest("#pinUnpinBtn")) return;
+  if (!pinnedMsg || !pinnedMsg.id) return;
+  const n = findMsgDom(String(pinnedMsg.id || ""), pinnedMsg.from || null, pinnedMsg.ts != null ? Number(pinnedMsg.ts) : null);
+  if (n) {
+    n.scrollIntoView({ behavior: "smooth", block: "center" });
+    n.classList.add("flash");
+    setTimeout(() => n.classList.remove("flash"), 1200);
+  }
+});
+if (pinUnpinBtn) pinUnpinBtn.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  try {
+    if (socket && socket.rpc && socket.rpc.unpinMessage) await socket.rpc.unpinMessage("");
+    else if (socket) socket.send(JSON.stringify({ t: "unpin" }));
+  } catch (err) {}
+  renderPinned(null);
+});
+const _pinBtn = document.getElementById("actPinBtn");
+if (_pinBtn) _pinBtn.addEventListener("click", async () => {
+  const list = [...selItems.values()];
+  const m = list.length === 1 ? list[0] : null;
+  if (!m) return;
+  const payload = { id: m.id || "", from: m.from || "", ts: m.ts != null ? Number(m.ts) : Date.now(), text: String(m.text || m.caption || "").slice(0, 300), url: String(m.url || "") };
+  try {
+    let r = "ok";
+    if (socket && socket.rpc && socket.rpc.pinMessage) r = await socket.rpc.pinMessage(JSON.stringify(payload));
+    else if (socket) { socket.send(JSON.stringify({ t: "pin", id: payload.id, from: payload.from, mts: payload.ts, text: payload.text, url: payload.url })); }
+    else r = "no socket";
+    if (r === "ok") { renderPinned(Object.assign({}, payload, { by: myName, at: Date.now() })); toast("Message pinned"); }
+    else toast("Couldn't pin: " + r);
+  } catch (err) {}
+  endSelection();
+});
+async function loadPinned() {
+  try {
+    if (!socket || !socket.rpc || !socket.rpc.getPinned) return;
+    const r = await socket.rpc.getPinned("");
+    const p = JSON.parse(r || "null");
+    renderPinned(p);
+  } catch (err) {}
+}
 async function renderOnlineList() {
   try {
     const r = await socket.rpc.getOnline("");
@@ -4744,7 +4810,11 @@ function handleMessage(m) {
       if (bubble) bubble.classList.toggle("flagged", !!m.flagged);
       n.dataset.flagged = m.flagged ? "1" : "0";
       if (n.dataset.ts && n.dataset.from) sbSetFlag(n.dataset.ts, n.dataset.from, !!m.flagged);
-    }
+    } else if (m.t === "pin") {
+    if (m.pin) renderPinned(m.pin);
+  } else if (m.t === "unpin") {
+    renderPinned(null);
+  }
   } else if (m.t === "react") {
     const ref = { id: m.id || null, from: m.from || null, ts: m.mts != null ? m.mts : m.ts };
     rxRememberNames(m.nm);
@@ -5505,7 +5575,7 @@ function silentAutoLoginRetry(s, loc, delay) {
   const d = delay || 4000;
   setTimeout(async () => {
     if (regionBlocked || vpnBlocked || savedNickApplied || !savedNick) return;
-    if (protectedNameFor(savedNick)) return;
+    if (false) return; // persistence: protected names stay logged in with saved password
     if (needsPass(savedNick) && !savedAdminPass) { promptNickReentry(); return; }
     if (!s || s !== socket || s.readyState !== 1) return;
     let r = null;
@@ -5684,9 +5754,8 @@ function connect() {
       const loc = await getMyIPLocation();
       try { s.rpc.reportLoc(loc).catch(() => {}); } catch (e) {}
       await ensureKvNick();
-      if (savedNick && protectedNameFor(savedNick)) clearSavedPass();
-      else if (savedNick && needsPass(savedNick) && !savedAdminPass) promptNickReentry();
-      if (savedNick && !currentApplied && !(needsPass(savedNick) && !savedAdminPass) && !protectedNameFor(savedNick)) {
+      if (savedNick && needsPass(savedNick) && !savedAdminPass) promptNickReentry();
+      if (savedNick && !currentApplied && !(needsPass(savedNick) && !savedAdminPass)) {
         currentApplied = true;
         let r = null;
         for (let attempt = 0; attempt < 2 && r !== "ok" && r !== "banned" && r !== "wrong_password" && r !== "name_taken"; attempt++) {
@@ -5735,6 +5804,7 @@ function connect() {
         if (Array.isArray(b)) for (const n of b) bannedNames.add(n);
       } catch (e) {}
       loadReactions();
+      loadPinned();
       if (translateOn) retranslateAll();
       if (isAdmin()) addAdminActionButtons();
       const t = await s.rpc.getTitle("");
@@ -6704,7 +6774,7 @@ function forceNick() {
 // password. Used when the server logs them out, and on reload so a saved
 // password never silently keeps a reserved name signed in.
 function promptProtectedLogin(name) {
-  clearSavedPass();
+  // persistence: keep saved password so reload restores the session; explicit logouts call clearSavedPass() first
   savedNickApplied = false;
   joinedOnce = false;
   forceNick();
@@ -6995,11 +7065,13 @@ const actFlagBtn = document.getElementById("actFlagBtn");
 const actInfoBtn = document.getElementById("actInfoBtn");
 const actBanBtn = document.getElementById("actBanBtn");
 const actDelBtn = document.getElementById("actDelBtn");
+const actPinBtn = document.getElementById("actPinBtn");
 const selCloseBtn = document.getElementById("selCloseBtn");
 const selActionBar = document.getElementById("selActionBar");
 actReplyBtn.innerHTML = REPLY_SVG;
 actCopyBtn.innerHTML = COPY_SVG;
 actEditBtn.innerHTML = EDIT_SVG;
+actPinBtn.innerHTML = PIN_SVG;
 actDelBtn.innerHTML = DEL_SVG;
 actFlagBtn.innerHTML = FLAG_SVG;
 actInfoBtn.innerHTML = INFO_SVG;
@@ -7034,6 +7106,9 @@ function updateSelBar() {
   const banned = target && bannedNames.has(target);
   actBanBtn.title = banned ? "Unban " + target : "Ban " + target + " (permanent)";
   actBanBtn.innerHTML = banned ? UNBAN_SVG : BAN_SVG;
+  const canPin = (isAdmin() || verifiedSet.has(myName)) && !dm && selList.length === 1 && selList[0] && (selList[0].t === "chat" || selList[0].t === "img");
+  const _pb = (typeof actPinBtn !== "undefined") ? actPinBtn : document.getElementById("actPinBtn");
+  if (_pb) _pb.classList.toggle("hide", !canPin);
   const selAll = [...selItems.values()];
   const canDel = dm ? selAll.every((x) => isMine(x)) : (admin || selAll.every((x) => isMine(x)) || (verifiedSet.has(myName) && selAll.every(canDeleteMsg)));
   actDelBtn.classList.toggle("hide", !canDel);
@@ -8028,7 +8103,6 @@ window.addEventListener("resize", () => { if (firstMsgGuide.classList.contains("
 function showNextOnboarding() {
   if (!tacAgreed) { tacModal.classList.remove("hide"); return; }
   if (!ageApproved) { ageModal.classList.remove("hide"); return; }
-  if (!savedNickApplied && savedNick && protectedNameFor(savedNick)) { promptProtectedLogin(savedNick); return; }
   if (!savedNick && !savedNickApplied && !vpnBlocked) { forceNick(); return; }
 }
 const agePreApprove = lsGet(ageKey) === "1" && lsGet(ageKey + "_blocked") !== "1";
