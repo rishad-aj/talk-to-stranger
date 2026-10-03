@@ -80,7 +80,7 @@ function nameHasBlacklisted(name) {
 function isEmoji(s) {
   if (typeof s !== "string" || !s) return false;
   var cps = [], i, ch;
-  for (ch of s) cps.push(ch.codePointAt(0));
+  for (var ch of s) cps.push(ch.codePointAt(0));
   if (cps.length > 12) return false;
   var pict = 0;
   for (i = 0; i < cps.length; i++) {
@@ -250,7 +250,7 @@ function uploadBlob(blob) {
 function randName() { return "Guest" + Math.floor(1000 + Math.random() * 9000); }
 function SupaSocket() {
   var self = this;
-  EventTarget.call(this);
+  self._et = new EventTarget();
   self.readyState = 0;
   self._reconnectDone = false;
   self._myName = null;
@@ -265,8 +265,9 @@ function SupaSocket() {
   self._rxCache = null;
   self._init();
 }
-SupaSocket.prototype = Object.create(EventTarget.prototype);
-SupaSocket.prototype.constructor = SupaSocket;
+SupaSocket.prototype.addEventListener = function (t, l, o) { return this._et.addEventListener(t, l, o); };
+SupaSocket.prototype.removeEventListener = function (t, l, o) { return this._et.removeEventListener(t, l, o); };
+SupaSocket.prototype.dispatchEvent = function (e) { return this._et.dispatchEvent(e); };
 SupaSocket.prototype._emit = function (obj) {
   var ev;
   try { ev = new MessageEvent("message", { data: JSON.stringify(obj) }); }
