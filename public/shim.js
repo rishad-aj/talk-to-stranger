@@ -4,6 +4,7 @@
    Realtime transport: Supabase Realtime (broadcast + presence).
    History/media: the app's own Supabase mirror (messages table) - unchanged.
    Translation: Google Translate via /api/translate (no key needed). */
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 window.generatorName = window.generatorName || "chat";
 (function () {
 "use strict";
@@ -14,9 +15,15 @@ try {
   if (window.__SUPABASE_URL) CFG.url = window.__SUPABASE_URL;
   if (window.__SUPABASE_ANON_KEY) CFG.key = window.__SUPABASE_ANON_KEY;
 } catch (e) {}
-fetch("./api/config").then(function (r) { return r.json(); }).then(function (j) {
-  if (j && j.url && j.key) { CFG.url = j.url; CFG.key = j.key; }
-}).catch(function () {});
+var configReady = new Promise(function (res) {
+  var done = false;
+  function fin() { if (!done) { done = true; res(true); } }
+  fetch("./api/config").then(function (r) { return r.json(); }).then(function (j) {
+    if (j && j.url && j.key) { CFG.url = j.url; CFG.key = j.key; }
+    fin();
+  }).catch(fin);
+  setTimeout(fin, 2500);
+});
 function sbH() {
   return { apikey: CFG.key, Authorization: "Bearer " + CFG.key, "Content-Type": "application/json", Prefer: "return=minimal" };
 }
@@ -31,7 +38,7 @@ function restJson(path) {
 var _sb = null;
 function sbClient() {
   if (_sb) return _sb;
-  _sb = window.supabase.createClient(CFG.url, CFG.key);
+  _sb = createClient(CFG.url, CFG.key);
   return _sb;
 }
 function sha256Hex(s) {
@@ -274,7 +281,7 @@ SupaSocket.prototype._fail = function (err) {
 };
 SupaSocket.prototype._init = function () {
   var self = this;
-  if (!window.supabase) { self._fail(new Error("supabase sdk missing")); return; }
+  configReady.then(function () {
   var chan;
   try {
     chan = sbClient().channel("chat-room-v1", { config: { broadcast: { self: true }, presence: { key: "sock-" + Math.random().toString(36).slice(2) } } });
@@ -301,6 +308,7 @@ SupaSocket.prototype._init = function () {
       if (self.readyState === 0) self._fail(new Error(status));
       else { self.readyState = 3; var ev = new Event("close"); ev.code = 1006; self.dispatchEvent(ev); }
     }
+  });
   });
 };
 SupaSocket.prototype._presenceNames = function () {
