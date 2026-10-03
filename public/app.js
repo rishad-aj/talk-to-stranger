@@ -7106,10 +7106,11 @@ function updateSelBar() {
   const banned = target && bannedNames.has(target);
   actBanBtn.title = banned ? "Unban " + target : "Ban " + target + " (permanent)";
   actBanBtn.innerHTML = banned ? UNBAN_SVG : BAN_SVG;
-  const canPin = (isAdmin() || verifiedSet.has(myName)) && !dm && selList.length === 1 && selList[0] && (selList[0].t === "chat" || selList[0].t === "img");
-  const _pb = (typeof actPinBtn !== "undefined") ? actPinBtn : document.getElementById("actPinBtn");
-  if (_pb) _pb.classList.toggle("hide", !canPin);
   const selAll = [...selItems.values()];
+  const _pinSingle = selAll.length === 1 ? selAll[0] : null;
+  const canPin = (isAdmin() || verifiedSet.has(myName)) && !dm && !!_pinSingle && (_pinSingle.t === "chat" || _pinSingle.t === "img");
+  const _pb = document.getElementById("actPinBtn");
+  if (_pb) _pb.classList.toggle("hide", !canPin);
   const canDel = dm ? selAll.every((x) => isMine(x)) : (admin || selAll.every((x) => isMine(x)) || (verifiedSet.has(myName) && selAll.every(canDeleteMsg)));
   actDelBtn.classList.toggle("hide", !canDel);
   const selList = [...selItems.values()];
