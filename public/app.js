@@ -5182,6 +5182,7 @@ function showOlderLoader(on) {
 }
 function firstRealNode() {
   for (const n of roomMessagesEl.children) {
+    if (n.id === "stickyDateWrap") continue;
     if (n.classList.contains("sep") || n.classList.contains("unreadBanner")) continue;
     return n;
   }
@@ -5235,6 +5236,7 @@ function maybeLoadOlder() {
   if (loadingOlder || allOlderLoaded || !oldestLoadedTs) return;
   if (scrollCtnEl.scrollTop < 150) loadOlder();
 }
+let olderFailures = 0;
 async function loadOlder() {
   if (loadingOlder || allOlderLoaded) return;
   loadingOlder = true;
@@ -5242,27 +5244,31 @@ async function loadOlder() {
   const anchor = firstRealNode();
   const anchorTop = anchor ? anchor.getBoundingClientRect().top : null;
   const scrollTop = scrollCtnEl.scrollTop;
-  const rows = await sbFetchOlder(oldestLoadedTs, OLDER_PAGE);
-  let added = 0;
-  if (rows.length) {
+  try {
+    const rows = await sbFetchOlder(oldestLoadedTs, OLDER_PAGE);
+    if (!rows.length) { allOlderLoaded = true; return; }
+    const minTs = Math.min.apply(null, rows.map(rowTs).filter((t) => t > 0));
+    if (isFinite(minTs)) oldestLoadedTs = Math.min(oldestLoadedTs || Infinity, minTs);
     const real = rows.filter(rowDomWorth).reverse();
-    if (real.length) {
-      added = prependRows(real);
-      oldestLoadedTs = Math.min(oldestLoadedTs, ...real.map(rowTs));
-    }
+    let added = 0;
+    if (real.length) added = prependRows(real);
     if (rows.length < OLDER_PAGE) allOlderLoaded = true;
-  } else {
-    allOlderLoaded = true;
+    if (added === 0) allOlderLoaded = true;
+    olderFailures = 0;
+  } catch (e) {
+    console.error("load-older", e);
+    olderFailures++;
+    if (olderFailures >= 3) allOlderLoaded = true;
+  } finally {
+    showOlderLoader(false);
+    if (anchor && anchor.isConnected && anchorTop != null) {
+      scrollCtnEl.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
+    } else if (scrollTop != null) {
+      scrollCtnEl.scrollTop = scrollTop;
+    }
+    if (scrollCtnEl.scrollTop < 150) scrollCtnEl.scrollTop = 150;
+    loadingOlder = false;
   }
-  if (added === 0) allOlderLoaded = true;
-  showOlderLoader(false);
-  if (anchor && anchor.isConnected && anchorTop != null) {
-    scrollCtnEl.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
-  } else if (scrollTop != null) {
-    scrollCtnEl.scrollTop = scrollTop;
-  }
-  if (scrollCtnEl.scrollTop < 150) scrollCtnEl.scrollTop = 150;
-  loadingOlder = false;
 }
 function flushHistoryBuffer() {
   if (!historyBuffer.length) return;
@@ -5299,7 +5305,9 @@ async function loadHistoryCore() {
       const realLatest = latest.filter(rowDomWorth).reverse();
       const real = unread.length > realLatest.length ? unread : realLatest;
       renderRowsInto(real);
-      oldestLoadedTs = Math.min.apply(null, real.map(rowTs));
+      const firstTs = real.map(rowTs).filter((t) => t > 0);
+      if (!firstTs.length) { allOlderLoaded = true; }
+      else oldestLoadedTs = Math.min.apply(null, firstTs);
       let totalRendered = roomMessagesEl.querySelectorAll(".msg").length;
       while (!allOlderLoaded && totalRendered < 40 && oldestLoadedTs) {
         const need = 40 - totalRendered;
