@@ -91,7 +91,12 @@ function attemptsClear(uname) { delete loginAttempts[String(uname).toLowerCase()
 function hasEmoji(s) {
   return /(?:\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF]|[\u00A9\u00AE\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299\uFE0F\u200D\u20E3])/.test(s || "");
 }
-function nameValid(n) { return !!n && Array.from(n).length >= 4 && !hasEmoji(n); }
+function nameValid(n) {
+  if (!n || Array.from(n).length < 4 || hasEmoji(n)) return false;
+  if (!/^[A-Za-z0-9 _-]+$/.test(String(n))) return false;
+  const m = String(n).match(/[A-Za-z]/g);
+  return !!m && m.length >= 4;
+}
 var PROF = [];
 fetch("/profanity.json").then(function (r) { return r.json(); }).then(function (a) { if (Array.isArray(a)) PROF = a; }).catch(function () {});
 function normName(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/(.)\1+/g, "$1"); }

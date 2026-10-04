@@ -13,6 +13,15 @@ function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} 
 function hasEmoji(s) {
   return /(?:\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDC00-\uDFFF]|[\u00A9\u00AE\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299\uFE0F\u200D\u20E3])/.test(s);
 }
+function nameLetterCount(n) { const m = String(n || "").match(/[A-Za-z]/g); return m ? m.length : 0; }
+function nameCharsOk(n) { return /^[A-Za-z0-9 _-]+$/.test(String(n || "")); }
+function nameRuleMsg(n) {
+  if (!n || Array.from(String(n)).length < 4) return "Name must be at least 4 characters";
+  if (hasEmoji(n)) return "Emojis are not allowed in names";
+  if (!nameCharsOk(n)) return "Only letters, numbers, - and _ are allowed in names";
+  if (nameLetterCount(n) < 4) return "Name must contain at least 4 letters";
+  return "";
+}
 function isSingleEmoji(s) {
   const t = String(s == null ? "" : s).trim();
   if (!t || t.length > 32) return false;
@@ -3753,8 +3762,8 @@ function selectFake(n) {
 asFakeCreateBtn.addEventListener("click", () => {
   const name = asFakeName.value.trim().slice(0, 20);
   if (!name) { toast("Enter a fake user name"); return; }
-  if (Array.from(name).length < 4) { toast("Name must be at least 4 characters"); return; }
-  if (hasEmoji(name)) { toast("Emojis are not allowed in names"); return; }
+  const fakeRule = nameRuleMsg(name);
+  if (fakeRule) { toast(fakeRule); return; }
   if (/^admin$/i.test(name)) { toast("Can't create the admin account"); return; }
   if (nameHasBlacklisted(name)) { toast("That name contains a blocked word — please pick another"); return; }
   if (fakeUsers.has(name)) { toast("That fake user already exists"); return; }
@@ -6795,13 +6804,9 @@ nickOkBtn.addEventListener("click", async () => {
     if (nickModal.classList.contains("force")) toast("Enter a name to join the chat");
     return;
   }
-  if (Array.from(name).length < 4) {
-    toast("Name must be at least 4 characters");
-    nickInput.focus();
-    return;
-  }
-  if (hasEmoji(name)) {
-    toast("Emojis are not allowed in names");
+  const ruleMsg = nameRuleMsg(name);
+  if (ruleMsg) {
+    toast(ruleMsg);
     nickInput.focus();
     return;
   }
@@ -6892,7 +6897,7 @@ nickOkBtn.addEventListener("click", async () => {
       toast("That name contains a blocked word — please pick another");
       nickInput.focus();
     } else if (r === "invalid") {
-      toast("Name must be at least 4 characters and contain no emojis");
+      toast("Use at least 4 letters — only letters, numbers, - and _ allowed");
     }
   } catch (e) {}
 });
