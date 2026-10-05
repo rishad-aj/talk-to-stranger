@@ -876,6 +876,48 @@ SupaSocket.prototype.rpc.banUser = function (data) {
     });
   });
 };
+SupaSocket.prototype.rpc.deleteMyAccount = function (data) {
+  var self = this;
+  var o = {};
+  try { o = typeof data === "string" ? JSON.parse(data) : data; } catch (e) {}
+  var pass = String((o && o.password) || "");
+  var name = String(self._myName || "").trim().slice(0, 20);
+  if (!name || /^admin$/i.test(name)) return Promise.resolve("invalid");
+  if (name.toLowerCase() === DELETED_NAME.toLowerCase()) return Promise.resolve("invalid");
+  function doDelete() {
+    var enc = encodeURIComponent(name);
+    var jobs = [
+      rest("messages?sender=eq." + enc + "&type=not.like.dm.*", "PATCH", { sender: DELETED_NAME }).catch(function () {}),
+      rest("messages?sender=eq." + enc + "&type=like.dm.*", "PATCH", { sender: DELETED_NAME }).catch(function () {}),
+      metaGet("pfps", {}).then(function (p) { p = (p && typeof p === "object") ? p : {}; delete p[name]; return metaSet("pfps", p); }).catch(function () {}),
+      metaGet("verified", []).then(function (v) { v = Array.isArray(v) ? v : []; return metaSet("verified", v.filter(function (x) { return String(x).toLowerCase() !== name.toLowerCase(); })); }).catch(function () {}),
+      rest("accounts?username=eq." + acctKey(name), "DELETE").then(function () {}).catch(function () {})
+    ];
+    return Promise.all(jobs).then(function () {
+      self._broad({ t: "rename", from: name, to: DELETED_NAME, uid: "", ts: Date.now() });
+      self._broad({ t: "pfp", name: name, url: "" });
+      self._broad({ t: "system", text: name + " deleted their account", ts: Date.now() });
+      self._myName = "";
+      self._named = false;
+      try { self._presence(); } catch (e) {}
+      return "ok";
+    });
+  }
+  return acctGet(name).then(function (acct) {
+    if (acct === null) return "db_error";
+    if (acct && acct.pass_hash) {
+      if (!pass) return "password_required";
+      return hashPw(pass, name).then(function (h) { return h === acct.pass_hash ? doDelete() : "wrong_password"; });
+    }
+    var prot = protectedUser(name);
+    if (prot) {
+      if (!pass) return "password_required";
+      return hashPass(pass, prot.salt).then(function (h) { return h === prot.hash ? doDelete() : "wrong_password"; });
+    }
+    if (!pass) return "password_required";
+    return doDelete();
+  }).catch(function () { return "db_error"; });
+};
 SupaSocket.prototype.rpc.unbanUser = function (data) {
   var self = this;
   return metaGet("verified", []).then(function (v) {

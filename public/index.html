@@ -3094,34 +3094,54 @@
   }
   body.dark #peopleScreen { background: rgba(24, 24, 28, 0.97); }
   #peopleHead { padding: 14px 16px 2px; }
-  #peopleTitle { font-size: 20px; font-weight: 700; color: #1c3a4f; }
+  #peopleTitle { font-size: 20px; font-weight: 800; color: #111; text-align: center; }
+  #peopleHead { text-align: center; }
   body.dark #peopleTitle { color: #ececf1; }
   #peopleSub { font-size: 12.5px; color: #6b8494; margin-top: 2px; }
   body.dark #peopleSub { color: #8f959d; }
   /* Named so browser autofill heuristics leave it alone: a silently pre-filled
      box would filter the list down to nothing on load. */
   #convoFilter {
-    margin: 10px 14px 6px; padding: 9px 12px; border-radius: 10px;
-    border: 1px solid #cfdae4; background: #fff; color: #111; width: auto;
+    margin: 10px 14px 6px; padding: 9px 12px 9px 34px; border-radius: 10px;
+    border: none; background: #efeff4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='15' height='15' fill='none' stroke='%238e8e93' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M16.5 16.5L21 21'/%3E%3C/svg%3E") 11px center no-repeat;
+    color: #111; width: auto;
     -webkit-appearance: none; appearance: none;
   }
   #convoFilter::-webkit-search-cancel-button { cursor: pointer; }
-  body.dark #convoFilter { background: #2b2b33; border-color: #3a3a44; color: #ececf1; }
-  #peopleScroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 16px; }
+  body.dark #convoFilter {
+    background: #2b2b33 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='15' height='15' fill='none' stroke='%239aa0a8' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M16.5 16.5L21 21'/%3E%3C/svg%3E") 11px center no-repeat;
+    border: none; color: #ececf1;
+  }
+  body.dark #convoFilter::placeholder { color: #8f959d; }
+  body.dark .pRow.hasUnread .pTime { color: #4fc3f7; }
+  #peopleScroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 0 16px; background: #fff; }
+  body.dark #peopleScroll { background: transparent; }
   .pSection {
     padding: 12px 10px 2px; font-size: 11.5px; font-weight: 700;
     letter-spacing: .6px; text-transform: uppercase; color: #7b93a3;
   }
   body.dark .pSection { color: #8f959d; }
-  .pRow { display: flex; align-items: center; gap: 11px; padding: 8px 8px; border-radius: 12px; cursor: pointer; }
-  .pRow:hover { background: rgba(38, 120, 182, 0.09); }
+  .pRow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 0; cursor: pointer; background: #fff; border-bottom: 1px solid #ececf1; }
+  .pRow:hover { background: #f2f5f9; }
+  body.dark .pRow { background: transparent; border-bottom-color: rgba(255, 255, 255, 0.07); }
   body.dark .pRow:hover { background: rgba(255, 255, 255, 0.06); }
   .pAvatar {
-    position: relative; width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    position: relative; width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
     color: #fff; font-weight: 700; font-size: 18px; display: flex; align-items: center;
     justify-content: center; overflow: hidden; text-transform: uppercase;
   }
   .pAvatar .avImg { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .ghostSvg { display: block; width: 62%; height: auto; }
+  .hasGhost { display: flex; align-items: center; justify-content: center; }
+  #avatarLetter { display: flex; align-items: center; justify-content: center; }
+  #avatarLetter .ghostSvg { width: 72%; }
+  #pfpPreview .ghostSvg { width: 58%; }
+  .tsClock { display: inline-flex; align-items: center; margin-left: 4px; vertical-align: -2px; color: #9db4c8; }
+  body.dark .tsClock { color: #b0a2e4; }
+  .msg.out .tsrow .tsClock svg { display: block; }
+  .delAccBtn { background: none; border: none; color: #e53935; font-size: 13px; margin-top: 10px; cursor: pointer; padding: 6px; }
+  body.dark .delAccBtn { color: #ff7b72; }
+  #nickModal.force #delAccountBtn { display: none; }
   .pAvatar.adminAvatar { background: linear-gradient(135deg, #d4a017, #a87900); }
   .pOnlineDot {
     position: absolute; right: 1px; bottom: 1px; width: 12px; height: 12px;
@@ -3130,15 +3150,18 @@
   body.dark .pOnlineDot { box-shadow: 0 0 0 2px #18181c; }
   .pMain { flex: 1; min-width: 0; }
   .pTop { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .pName { font-weight: 600; color: #17313f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pName { font-weight: 700; font-size: 16px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   body.dark .pName { color: #f0f0f4; }
-  .pTime { margin-left: auto; font-size: 11px; color: #8098a8; flex-shrink: 0; }
+  .pMeta { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .pTick { display: inline-flex; color: #40a7e3; flex-shrink: 0; }
+  .pTime { font-size: 12px; color: #8d8d93; flex-shrink: 0; }
   body.dark .pTime { color: #9aa0a8; }
-  .pPreview { font-size: 13px; color: #5d7484; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pRow.hasUnread .pTime { color: #2ca5e0; font-weight: 600; }
+  .pPreview { font-size: 14px; color: #8e8e93; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   body.dark .pPreview { color: #9aa0a8; }
   .pBadge {
-    margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
-    background: #22c55e; color: #fff; font-size: 11.5px; font-weight: 700;
+    margin-left: 8px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+    background: #40a7e3; color: #fff; font-size: 12px; font-weight: 700;
     line-height: 20px; text-align: center; flex-shrink: 0;
   }
   .pDel {
@@ -3456,6 +3479,19 @@
         <button id="nickCancelBtn">Cancel</button>
         <button id="nickOkBtn">Save</button>
       </div>
+      <button id="delAccountBtn" type="button" class="delAccBtn">Delete my account</button>
+    </div>
+  </div>
+
+  <div id="delAccModal" class="modal hide">
+    <div class="card">
+      <div class="cardTitle">Delete account</div>
+      <div class="cardDesc">This permanently removes your name, picture and password. Your past messages will show as “Deleted Account”. This cannot be undone.</div>
+      <input id="delAccPassInput" type="password" maxlength="40" placeholder="Enter password" autocomplete="off">
+      <div class="cardBtns">
+        <button id="delAccCancelBtn">Cancel</button>
+        <button id="delAccOkBtn" class="dangerBtn">Delete</button>
+      </div>
     </div>
   </div>
 
@@ -3584,6 +3620,8 @@
         • The admin may delete any message at any time.<br>
         • The admin may ban any user permanently, without warning and without appeal.<br>
         • Bans are final — there is no unban or appeal process.<br>
+        • Banned users have their messages renamed to “Deleted Account” with a red Banned tag.<br>
+        • You have the right to delete your account at any time from Edit profile → Delete my account. This removes your name, picture and password; your past messages will show as “Deleted Account”.<br>
         • If you break these rules, you will be permanently banned from this chat.<br><br>
         By tapping "I Agree" you accept these terms and agree to follow them.
       </div>

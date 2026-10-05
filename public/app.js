@@ -340,17 +340,19 @@ function setPfpLocal(name, url) {
    the app has always drawn (initial over the name colour). A picture that fails
    to load falls back to the initial instead of leaving an empty circle. */
 function paintAvatar(node, name) {
-  const url = pfpFor(name);
+  const url = isDeletedName(name) ? "" : pfpFor(name);
   node.textContent = "";
   node.title = name || "";
+  node.classList.remove("hasGhost");
   if (name !== "admin" && !node.classList.contains("adminAvatar")) node.style.background = avatarBg(name);
+  if (!url) { paintGhost(node); return; }
   if (url) {
     const img = document.createElement("img");
     img.className = "avImg";
     img.alt = "";
     img.loading = "lazy";
     img.decoding = "async";
-    img.addEventListener("error", () => { img.remove(); node.textContent = senderInitial(name); if (node.classList && node.classList.contains("msgAvatar") && !node.closest("#typingRow")) paintAvatarDot(node, name); }, { once: true });
+    img.addEventListener("error", () => { img.remove(); node.classList.remove("hasGhost"); paintGhost(node); if (node.classList && node.classList.contains("msgAvatar") && !node.closest("#typingRow")) paintAvatarDot(node, name); }, { once: true });
     img.src = url;
     node.appendChild(img);
   } else {
@@ -396,10 +398,11 @@ function renderPfpPreview() {
     img.className = "avImg";
     img.alt = "";
     img.src = url;
-    img.addEventListener("error", () => { img.remove(); pfpPreview.textContent = senderInitial(name) || "?"; }, { once: true });
+    img.addEventListener("error", () => { img.remove(); pfpPreview.classList.remove("hasGhost"); paintGhost(pfpPreview); }, { once: true });
     pfpPreview.appendChild(img);
   } else {
-    pfpPreview.textContent = senderInitial(name) || "?";
+    pfpPreview.classList.remove("hasGhost");
+    paintGhost(pfpPreview);
     pfpPreview.style.background = name ? avatarBg(name) : "";
   }
   pfpPreview.classList.toggle("busy", pfpBusy);
@@ -748,6 +751,7 @@ const dmScrollTops = new Map();           // peer -> scroll position when it was
 // draw a tick of its own inside a private thread, so it is suppressed there (see
 // the CSS) and this is the only tick source in a private chat.
 const DM_TICK_SENT_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l4.5 4.5L19.5 6.5"/></svg>';
+const LIST_TICK_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12.5l4 4L15 6.5"/><path d="M9.5 16.5l1 1L22 6.5"/></svg>';
 const DM_TICK_SEEN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12.5l4 4L15 6.5"/><path d="M9.5 16.5l1 1L22 6.5"/></svg>';
 
 function setRoomTitle(t) {
@@ -769,7 +773,9 @@ function applyHeader() {
     avatar.style.backgroundPosition = url ? "center" : "";
     avatar.style.color = url ? "transparent" : "";
     avatar.classList.toggle("hasPfp", !!url);
-    avatarLetter.textContent = url ? "" : senderInitial(peer);
+    avatar.style.background = url ? "" : avatarBg(peer);
+    if (url) { avatarLetter.textContent = ""; }
+    else { avatarLetter.textContent = ""; paintGhost(avatarLetter); }
     onlineSub.textContent = onlineNames.has(peer) ? "online" : "offline";
     iconBtn.classList.add("hide");
     titleEditBtn.classList.add("hide");
@@ -792,6 +798,7 @@ function applyHeader() {
     titleEditBtn.classList.add("hide");
     // view-as eye removed per privacy terms
   } else {
+    avatar.style.background = "";
     applyIcon(currentIconUrl);
     chatTitle.textContent = roomTitleText;
     avatarLetter.textContent = (roomTitleText.trim().charAt(0) || "C").toUpperCase();
@@ -940,10 +947,21 @@ function personRow(peer, info) {
   const main = el("div", "pMain");
   const top = el("div", "pTop");
   top.appendChild(el("span", "pName", peer));
+  if (senderIsBanned(peer)) top.appendChild(el("span", "bannedChip", "banned"));
   if (peer === "admin") top.appendChild(el("span", "olTag", "ADMIN"));
   else if (verifiedSet.has(peer)) top.appendChild(verifiedBadgeEl());
   const unread = Number(dmUnreadMap[peer]) || 0;
-  if (info && info.ts) top.appendChild(el("span", "pTime", fmtTimeShort(info.ts)));
+  if (unread) row.classList.add("hasUnread");
+  if (info && info.ts) {
+    const meta = el("span", "pMeta");
+    if (info.from === myName) {
+      const tick = el("span", "pTick");
+      tick.innerHTML = LIST_TICK_SVG;
+      meta.appendChild(tick);
+    }
+    meta.appendChild(el("span", "pTime", fmtTimeShort(info.ts)));
+    top.appendChild(meta);
+  }
   main.appendChild(top);
   const hasText = info && info.preview;
   const label = hasText
@@ -987,7 +1005,7 @@ function roomRow() {
   main.appendChild(top);
   main.appendChild(el("div", "pPreview", last.text || "No messages yet"));
   row.appendChild(main);
-  if (unreadCount) row.appendChild(el("span", "pBadge", unreadCount > 99 ? "99+" : String(unreadCount)));
+  if (unreadCount) { row.classList.add("hasUnread"); row.appendChild(el("span", "pBadge", unreadCount > 99 ? "99+" : String(unreadCount))); }
   row.addEventListener("click", () => showRoom());
   return row;
 }
@@ -1286,7 +1304,7 @@ function paintDmTick(wrap, readMark) {
   if (tick.dataset.state === state) return;
   tick.dataset.state = state;
   tick.classList.toggle("seen", seen);
-  tick.innerHTML = seen ? DM_TICK_SEEN_SVG : DM_TICK_SENT_SVG;
+  tick.innerHTML = seen ? DM_TICK_SEEN_SVG : CLOCK_SVG;
   tick.title = seen ? "Read" : "Sent";
 }
 
@@ -1841,7 +1859,7 @@ function senderNameEl(m, mine, grouped) {
   s.textContent = m.from;
   s.style.color = nameColor(m.from);
   applyVerifiedToSender(s);
-  if (bannedNames.has(m.from)) s.appendChild(el("span", "bannedChip", "banned"));
+  if (senderIsBanned(m.from)) s.appendChild(el("span", "bannedChip", "banned"));
   return s;
 }
 
@@ -3037,6 +3055,32 @@ replyQuoteBox.addEventListener("click", () => scrollToMsgId(replyToMsg && replyT
 function addUploadPlaceholder(kind, payload) {
   const wrap = el("div", "msg out");
   const bubble = el("div", "bubble uploadBubble");
+  if (kind === "text") {
+    bubble.classList.remove("uploadBubble");
+    const opts = payload || {};
+    if (opts.replyTo) bubble.appendChild(replyQuoteEl(opts.replyTo, nameColor(opts.replyTo.from)));
+    const text = el("div", "btext");
+    text.textContent = opts.text || "";
+    bubble.appendChild(text);
+    try { syncEmojiClass(bubble, opts.text || ""); } catch (e) {}
+    const ts = el("span", "tsrow");
+    const time = el("span", "tsTime");
+    time.textContent = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    ts.appendChild(time);
+    const clock = el("span", "tsClock");
+    clock.innerHTML = CLOCK_SVG;
+    clock.title = "Sending";
+    ts.appendChild(clock);
+    bubble.appendChild(ts);
+    wrap.appendChild(bubble);
+    stripEmptyHint(messagesEl);
+    messagesEl.appendChild(wrap);
+    scrollBottom();
+    const tph = { wrap, done: false };
+    uploadPlaceholders.push(tph);
+    setTimeout(() => removeUploadPlaceholder(tph), 8000);
+    return tph;
+  }
   if (kind === "img") {
     const box = el("div", "uploadImgBox");
     box.appendChild(el("div", "spinner"));
@@ -3107,10 +3151,11 @@ async function downloadImage(url, name) {
 
 
 function refreshBanUI(name) {
-  const banned = bannedNames.has(name);
+  const banned = senderIsBanned(name);
   for (const host of msgContainers()) {
     for (const wrap of [...host.children]) {
-      if (!wrap.classList.contains("msg") || wrap.dataset.from !== name) continue;
+      if (!wrap.classList.contains("msg")) continue;
+      if (wrap.dataset.from !== name && !(banned && isDeletedName(wrap.dataset.from))) continue;
       const bubble = wrap.querySelector(".bubble");
       if (!bubble) continue;
       const sn = bubble.querySelector(".senderName");
@@ -4371,6 +4416,28 @@ function senderInitial(name) {
   const m = s.match(/[\p{L}\p{N}]/u);
   return (m ? m[0] : (Array.from(s)[0] || "?")).toUpperCase();
 }
+const GHOST_BODY = "m278.5 1c-6.1 0.5-13.5 1.3-16.5 1.9-3 0.6-7.8 1.4-10.5 2-2.8 0.5-10.4 2.5-17 4.4-6.6 1.9-16.1 5.1-21 7.2-5 2-12.6 5.5-17 7.7-4.4 2.2-10.7 5.6-14 7.6-3.3 2-9.2 5.9-13 8.6-3.9 2.8-10.8 8.2-15.5 12.2-4.7 3.9-11.7 10.5-15.5 14.5-3.9 4.1-7.9 8.7-9 10.3-1.1 1.6-3.8 5.2-6 8-2.2 2.8-5.7 7.8-7.7 11.1-2 3.3-5.4 9.6-7.6 14-2.2 4.4-5.6 12.3-7.5 17.5-1.9 5.2-4.2 12-5 15-0.9 3-2.1 8.2-2.7 11.5-0.7 3.3-1.6 8.5-2.1 11.5-0.5 3-1.3 30-1.8 60-0.5 30-1.4 59.4-2 65.5-0.7 6-1.6 14.8-2.1 19.5-0.5 4.7-2.1 14.1-3.5 21-1.4 6.9-2.9 14.1-3.4 16-0.6 1.9-1.7 6.2-2.5 9.5-0.9 3.3-2.5 8.9-3.7 12.5-1.1 3.6-2.9 8.7-3.9 11.5-1 2.7-3.5 9.3-5.6 14.5-2 5.2-6.7 16-10.3 24-3.7 8-9.6 19.7-13.3 26-3.6 6.3-7.5 13.3-8.7 15.5-1.2 2.2-4 6.7-6.2 10-2.1 3.3-4.2 6.7-4.6 7.5-0.3 0.8-2.1 3.5-3.9 6-1.8 2.5-3.3 4.8-3.4 5.2 0 0.5-1.5 3.2-3.3 6-1.9 2.9-4.3 6.9-5.5 8.8-1.2 1.9-2.4 5.5-2.8 8-0.4 3-0.1 6.1 0.9 9.5 0.9 2.7 3.1 7.7 4.9 11 1.8 3.2 5.5 7.8 8.3 10.2 2.7 2.4 6.3 5 8 5.8 1.6 0.9 6.6 2.3 11 3.2 5.8 1.1 10.9 1.4 18.5 1 5.8-0.3 12.7-1.1 15.5-1.8 2.7-0.7 9.5-2.5 15-4 5.5-1.5 17.4-5.5 26.5-8.9 9.1-3.4 23-8.3 31-10.9 8-2.7 16.7-5.3 19.5-5.9 2.7-0.7 8.6-1.5 13-1.8 5-0.4 10.6-0.2 15 0.6 3.8 0.7 9.2 2.3 12 3.5 2.7 1.2 8.4 4.4 12.5 7.1 4.1 2.6 10.2 6.9 13.5 9.4 3.3 2.5 9.4 6.2 13.5 8.2 4.1 2 10 4.5 13 5.6 3 1.1 7.6 2.4 10.2 3.1 2.7 0.6 9.2 1.6 14.5 2.2 5.8 0.7 16.5 0.9 26.3 0.6 9.1-0.3 20.1-1.3 24.5-2.2 4.4-0.8 10-2.2 12.5-2.9 2.5-0.8 7.9-2.9 12-4.8 4.1-1.9 12.6-7.1 18.7-11.6 6.2-4.5 14.1-9.7 17.5-11.6 3.5-1.9 8.5-4.1 11.3-4.9 2.7-0.8 8.1-1.8 12-2.2 4.2-0.4 10.2-0.2 15 0.5 4.4 0.6 12 2.2 17 3.6 4.9 1.3 11.5 3.3 14.5 4.5 3 1.2 9.1 3.5 13.5 5.1 4.4 1.6 12.9 4.7 19 6.9 6 2.2 14.6 5.1 19 6.5 4.4 1.4 11.6 3.2 16 4.1 4.8 1 13.2 1.7 21 1.7 8.3 0.1 14.6-0.4 17.5-1.3 2.5-0.7 6.1-2.2 8-3.2 1.9-1 5.9-4.2 8.8-7.1 2.9-2.9 5.3-5.9 5.2-6.6 0-0.6 0.3-1.2 0.7-1.2 0.5 0.1 1.9-2.3 3.2-5.2 1.3-2.9 2.6-7.8 2.9-10.8 0.3-3 0.2-6.6-0.1-8-0.3-1.4-2.9-6-5.7-10.3-2.7-4.2-5-7.9-5-8.2 0-0.3-2-3.5-4.4-7.3-2.4-3.7-8.5-13.7-13.6-22.2-5.1-8.5-12.3-21.4-15.9-28.5-3.7-7.2-9.3-19.3-12.5-27-3.3-7.7-6.5-15.4-7.2-17-0.7-1.7-2.8-7.8-4.8-13.8-2-5.9-4.6-14.2-5.7-18.5-1.2-4.2-3-11.5-4.1-16.2-1-4.7-2.5-12.1-3.3-16.5-0.8-4.4-2.2-14.5-3.1-22.5-1.1-10.4-1.8-30.2-2.4-70.5-0.5-30.8-1.4-59.2-1.9-63-0.6-3.9-1.6-9.5-2.2-12.5-0.6-3-2.2-9.6-3.5-14.5-1.4-5-3-10.1-3.6-11.5-0.6-1.4-1.4-3.4-1.8-4.5-0.4-1.1-2.8-6.4-5.3-11.8-2.6-5.3-4.7-9.9-4.7-10.2 0-0.3-1.2-2.4-2.8-4.8-1.5-2.3-2.9-4.7-3.2-5.2-0.3-0.6-3.7-5.3-7.7-10.5-4-5.2-11-13.4-15.5-18.1-4.6-4.8-12.4-11.9-17.3-15.9-5-4.1-12.6-9.7-17-12.6-4.4-2.9-14.3-8.4-22-12.3-7.7-3.9-14.3-7.1-14.8-7.1-0.4 0-2.2-0.7-4-1.5-1.7-0.8-6.6-2.5-10.7-3.9-4.1-1.3-13.1-3.8-20-5.5-6.9-1.6-16.1-3.5-20.5-4-4.4-0.5-14.5-1.2-22.5-1.4-8-0.3-19.5-0.1-25.5 0.3z";
+const GHOST_EYES = "m375.5 144.9c-3.3 1.6-7.2 4.2-8.7 5.7-1.5 1.6-3.7 4-5 5.4-1.2 1.4-3.4 5-4.9 8-1.5 3-3.2 8.2-3.8 11.5-0.6 3.3-1.1 8.5-1.1 11.5 0.1 3 0.7 8 1.4 11 0.7 3 2.3 7.7 3.7 10.4 1.3 2.7 4.5 7.2 7 10 2.5 2.8 7 6.4 10 8.1 4.5 2.4 6.6 2.9 12.4 2.9 4.6 0.1 8.9-0.6 12.5-1.9 3.9-1.4 7.2-3.7 11.5-8 3.3-3.3 7.2-8.5 8.6-11.5 1.5-3 3.2-8 3.9-11 0.9-3.7 1.1-8.6 0.6-15-0.3-5.2-1.1-10-1.6-10.5-0.6-0.6-1-1.8-1-2.8 0-0.9-0.8-3.1-1.8-4.9-0.9-1.8-2.8-4.8-4.1-6.8-1.3-1.9-4.6-5.3-7.5-7.5-2.8-2.2-7.2-4.8-9.9-5.7-2.6-1-7.3-1.8-10.5-1.8-4.1 0.1-7.3 0.9-11.7 2.9zm-171.2-0.6c-1.8 0.7-6 3.2-9.4 5.7-3.3 2.5-7.6 6.7-9.4 9.5-1.8 2.7-4 7.2-4.9 10-1 2.7-2.1 7.9-2.5 11.5-0.5 3.6-0.5 9.3 0 12.7 0.5 3.5 1.8 8.5 2.9 11.3 1.1 2.7 3.2 6.9 4.6 9.2 1.5 2.4 4.1 5.6 5.8 7.2 1.7 1.6 4.8 4 6.8 5.3 2.1 1.2 6.8 2.8 10.5 3.4 5.1 0.8 7.9 0.8 11.3-0.1 2.5-0.6 6.3-2.1 8.5-3.2 2.2-1.2 6.2-4.4 8.8-7.2 2.7-2.8 5.9-7.4 7.2-10.1 1.3-2.8 2.9-7 3.6-9.5 0.7-2.5 1.2-8.3 1.2-13 0.1-5.3-0.6-10.8-1.7-14.5-1-3.3-3.3-8.5-5.1-11.5-1.8-3-5.1-7.2-7.4-9.3-2.3-2-5.1-4.2-6.4-4.8-1.2-0.7-4.2-1.8-6.7-2.5-2.5-0.8-6.8-1.3-9.5-1.3-2.8 0-6.4 0.6-8.2 1.2z";
+let ghostSeq = 0;
+function isDeletedName(n) { return String(n || "").trim().toLowerCase() === "deleted account"; }
+function ghostSvg() {
+  const id = "gm" + (++ghostSeq) + Date.now().toString(36);
+  return '<svg class="ghostSvg" viewBox="0 0 593 561" width="48" height="45" aria-hidden="true"><defs><mask id="' + id + '"><path d="' + GHOST_BODY + '" fill="#fff"/><path d="' + GHOST_EYES + '" fill="#000"/></mask></defs><path d="' + GHOST_BODY + '" fill="#fcfcfc" mask="url(#' + id + ')"/></svg>';
+}
+function paintGhost(node) {
+  if (!node) return;
+  node.textContent = "";
+  node.classList.add("hasGhost");
+  node.insertAdjacentHTML("beforeend", ghostSvg());
+}
+function senderIsBanned(from) {
+  if (!from) return false;
+  if (bannedNames.has(from)) return true;
+  if (!isDeletedName(from)) return false;
+  for (const n of bannedNames) if (n && !isDeletedName(n)) return true;
+  return false;
+}
+const CLOCK_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 const tailObserver = new MutationObserver(() => { updateBubbleTails(); scheduleDaySeps(); });
 tailObserver.observe(messagesEl, { childList: true });
 function translateRealtimeMessage(m, wrap) {
@@ -4593,7 +4660,7 @@ function applyRename(from, to, uid) {
     sn.style.color = nameColor(to);
     applyVerifiedToSender(sn);
     const chip = sn.querySelector(".bannedChip");
-    if (bannedNames.has(to)) { if (!chip) sn.appendChild(el("span", "bannedChip", "banned")); }
+    if (senderIsBanned(to)) { if (!chip) sn.appendChild(el("span", "bannedChip", "banned")); }
     else if (chip) chip.remove();
   }
   for (const host of msgContainers()) {
@@ -6902,6 +6969,57 @@ nickOkBtn.addEventListener("click", async () => {
   } catch (e) {}
 });
 nickInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nickOkBtn.click(); });
+const delAccountBtn = document.getElementById("delAccountBtn");
+const delAccModal = document.getElementById("delAccModal");
+const delAccPassInput = document.getElementById("delAccPassInput");
+const delAccCancelBtn = document.getElementById("delAccCancelBtn");
+const delAccOkBtn = document.getElementById("delAccOkBtn");
+if (delAccountBtn && delAccModal) {
+  delAccountBtn.addEventListener("click", () => {
+    if (!myName) { toast("Join first, then you can delete that account"); return; }
+    delAccPassInput.value = "";
+    delAccModal.classList.remove("hide");
+    delAccPassInput.focus();
+  });
+  delAccCancelBtn.addEventListener("click", () => delAccModal.classList.add("hide"));
+  delAccPassInput.addEventListener("keydown", (e) => { if (e.key === "Enter") delAccOkBtn.click(); });
+  let delAccBusy = false;
+  const delAccArm = { armed: false };
+  delAccOkBtn.addEventListener("click", async () => {
+    if (delAccBusy || !myName) return;
+    if (!delAccArm.armed) {
+      delAccArm.armed = true;
+      delAccOkBtn.textContent = "Tap again to confirm";
+      setTimeout(() => { delAccArm.armed = false; try { delAccOkBtn.textContent = "Delete"; } catch (e) {} }, 4000);
+      return;
+    }
+    const pass = delAccPassInput.value;
+    if (!pass) { toast("Enter your password to delete your account"); delAccPassInput.focus(); delAccArm.armed = false; delAccOkBtn.textContent = "Delete"; return; }
+    delAccBusy = true;
+    delAccOkBtn.disabled = true;
+    try {
+      const r = await socket.rpc.deleteMyAccount(JSON.stringify({ password: pass }));
+      if (r === "ok") {
+        try {
+          const drop = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (/nick|pass|pfp|uid|dm_|unread|thread|mention|draft|myname|savednick/i.test(k || "")) drop.push(k);
+          }
+          drop.forEach((k) => localStorage.removeItem(k));
+        } catch (e) {}
+        location.reload();
+        return;
+      }
+      if (r === "wrong_password" || r === "password_required") toast("Wrong password");
+      else toast("Couldn't delete account: " + r);
+    } catch (e) { toast("Couldn't delete account"); }
+    delAccBusy = false;
+    delAccArm.armed = false;
+    delAccOkBtn.disabled = false;
+    delAccOkBtn.textContent = "Delete";
+  });
+}
 nickPassInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nickOkBtn.click(); });
 
 titleEditBtn.addEventListener("click", () => {
