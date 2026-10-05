@@ -925,15 +925,14 @@
     pointer-events: none;
   }
   .gifPauseBadge[hidden] { display: none; }
+  .gifPauseBadge[hidden] { display: none; }
   .gifPauseBadge svg {
-    width: 44px;
-    height: 44px;
-    padding: 11px;
+    width: auto;
+    height: 34px;
+    padding: 0;
     box-sizing: content-box;
-    border-radius: 50%;
-    background: rgba(88, 94, 102, 0.45);
-    color: rgba(255, 255, 255, 0.94);
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+    border-radius: 9px;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
   }
   /* tailed media bubbles: tail sits at the bubble's bottom edge (same curve as the other corners) */
   .msg .bubble.imgBubble::after,
@@ -3807,13 +3806,6 @@
         </div>
         <div id="asDelList"><div class="asHint">Loading…</div></div>
         <div class="asHint">Every deleted room message, including ones users unsent themselves. Only you can see this.</div>
-        <div class="asSection">Private chats</div>
-        <div id="asDmRow">
-          <button id="asDmRefreshBtn">Refresh</button>
-        </div>
-        <div id="asDmList"><div class="asHint">Loading…</div></div>
-        <div id="asDmThread" class="hide"></div>
-        <div class="asHint">Every private conversation between verified users, so you can moderate it. Deleting removes a message (or the whole conversation) for both participants.</div>
       </div>
     </div>
   </div>
