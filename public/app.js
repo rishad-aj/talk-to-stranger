@@ -340,19 +340,20 @@ function setPfpLocal(name, url) {
    the app has always drawn (initial over the name colour). A picture that fails
    to load falls back to the initial instead of leaving an empty circle. */
 function paintAvatar(node, name) {
-  const url = isDeletedName(name) ? "" : pfpFor(name);
   node.textContent = "";
   node.title = name || "";
   node.classList.remove("hasGhost");
   if (name !== "admin" && !node.classList.contains("adminAvatar")) node.style.background = avatarBg(name);
-  if (!url) { paintGhost(node); return; }
+  if (isDeletedName(name)) { paintGhost(node); return; }
+  const url = pfpFor(name);
+  if (!url) { node.textContent = senderInitial(name); return; }
   if (url) {
     const img = document.createElement("img");
     img.className = "avImg";
     img.alt = "";
     img.loading = "lazy";
     img.decoding = "async";
-    img.addEventListener("error", () => { img.remove(); node.classList.remove("hasGhost"); paintGhost(node); if (node.classList && node.classList.contains("msgAvatar") && !node.closest("#typingRow")) paintAvatarDot(node, name); }, { once: true });
+    img.addEventListener("error", () => { img.remove(); node.textContent = senderInitial(name); if (node.classList && node.classList.contains("msgAvatar") && !node.closest("#typingRow")) paintAvatarDot(node, name); }, { once: true });
     img.src = url;
     node.appendChild(img);
   } else {
@@ -398,11 +399,12 @@ function renderPfpPreview() {
     img.className = "avImg";
     img.alt = "";
     img.src = url;
-    img.addEventListener("error", () => { img.remove(); pfpPreview.classList.remove("hasGhost"); paintGhost(pfpPreview); }, { once: true });
+    img.addEventListener("error", () => { img.remove(); pfpPreview.textContent = senderInitial(name) || "?"; }, { once: true });
     pfpPreview.appendChild(img);
   } else {
     pfpPreview.classList.remove("hasGhost");
-    paintGhost(pfpPreview);
+    if (isDeletedName(name)) paintGhost(pfpPreview);
+    else pfpPreview.textContent = senderInitial(name) || "?";
     pfpPreview.style.background = name ? avatarBg(name) : "";
   }
   pfpPreview.classList.toggle("busy", pfpBusy);
@@ -774,8 +776,10 @@ function applyHeader() {
     avatar.style.color = url ? "transparent" : "";
     avatar.classList.toggle("hasPfp", !!url);
     avatar.style.background = url ? "" : avatarBg(peer);
+    avatarLetter.classList.remove("hasGhost");
     if (url) { avatarLetter.textContent = ""; }
-    else { avatarLetter.textContent = ""; paintGhost(avatarLetter); }
+    else if (isDeletedName(peer)) { avatarLetter.textContent = ""; paintGhost(avatarLetter); }
+    else { avatarLetter.textContent = senderInitial(peer); }
     onlineSub.textContent = onlineNames.has(peer) ? "online" : "offline";
     iconBtn.classList.add("hide");
     titleEditBtn.classList.add("hide");
@@ -3072,6 +3076,7 @@ function addUploadPlaceholder(kind, payload) {
     clock.title = "Sending";
     ts.appendChild(clock);
     bubble.appendChild(ts);
+    try { applyAuthorOutline(bubble, myName); } catch (e) {}
     wrap.appendChild(bubble);
     stripEmptyHint(messagesEl);
     messagesEl.appendChild(wrap);
