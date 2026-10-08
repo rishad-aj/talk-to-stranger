@@ -1098,6 +1098,8 @@
     to { transform: rotate(360deg); }
   }
   .miniSpinner {
+    display: inline-block;
+    vertical-align: -2px;
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -1539,6 +1541,8 @@
   .rxPickGrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
   .rxPickBtn {
     width: 100%;
+    min-width: 0;
+    overflow: hidden;
     aspect-ratio: 1 / 1;
     padding: 0;
     border: none;
@@ -1569,7 +1573,7 @@
     box-shadow: 3px 3px 7px rgba(16, 35, 47, 0.14);
   }
   #rxPick.below #rxPickTail { bottom: auto; top: -5px; box-shadow: -3px -3px 7px rgba(16, 35, 47, 0.08); }
-  .rxBarBtn.rxPlus { position: relative; width: 34px; color: #5b7d99; }
+  .rxBarBtn.rxPlus { position: relative; width: 38px; color: #5b7d99; }
   .rxBarBtn.rxPlus::before {
     content: "";
     position: absolute;
@@ -2157,6 +2161,8 @@
     font-size: 25px;
     line-height: 1;
     height: 42px;
+    min-width: 0;
+    overflow: hidden;
     border-radius: 8px;
     cursor: pointer;
     padding: 0;
@@ -2303,6 +2309,12 @@
   #gifGrid .gifCell:active { opacity: 0.75; }
   #gifGrid .gifLoad { font-size: 13px; color: #a2acb4; padding: 24px 10px; text-align: center; grid-column: 1 / -1; }
   #gifGrid .gifErr { font-size: 13px; color: #e53935; padding: 24px 10px; text-align: center; grid-column: 1 / -1; }
+  @media (min-width: 521px) {
+    #gifGrid { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (min-width: 820px) {
+    #gifGrid { grid-template-columns: repeat(5, 1fr); }
+  }
 
   /* ---------- scroll to bottom button ---------- */
   #scrollDownBtn {

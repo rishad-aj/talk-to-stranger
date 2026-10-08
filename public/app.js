@@ -6676,9 +6676,9 @@ async function gifLoadMore() {
     const { items, done } = await gifFetchPage(gifState.q, gifState.offset);
     gifState.offset += GIF_PER_PAGE;
     gifState.done = done;
+    showGifLoader(false);
     appendGifItems(items);
-    if (gifState.done) showGifLoader(false);
-    else checkGifScroll();
+    if (!gifState.done) checkGifScroll();
   } catch (e) {
     showGifLoader(false);
     gifState.done = true;
@@ -6696,7 +6696,7 @@ async function runGifSearch(query) {
   if (!q || gifSearchBusy) return;
   gifSearchBusy = true;
   gifState = { q, offset: 0, done: false, waiting: false };
-  gifGridEl.innerHTML = "<div class='gifLoad'><span class='miniSpinner'></span></div>";
+  gifGridEl.innerHTML = "<div class='gifLoad'><span class='miniSpinner'></span> Loading…</div>";
   try {
     const { items, done } = await gifFetchPage(q, 0);
     gifState.offset = GIF_PER_PAGE;
