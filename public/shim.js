@@ -374,26 +374,29 @@ SupaSocket.prototype._presenceNames = function () {
   return out;
 };
 // Join notices come from the server broadcast, but Supabase presence has no
-// server-side leave hook - so a leave is synthesized locally: a name that was
-// stably present (2+ syncs; unnamed pre-login guests never count) and vanishes
-// gets an "X left" notice. Renames and recent leaves are suppressed so a
-// rename or a flapping connection doesn't print a false leave.
+// server-side leave hook - so a leave is synthesized locally: a named user
+// that was present and vanishes gets an "X left" notice. Our own handover gap
+// (old session gone, new one not yet named) is never a real leave, and repeat
+// leaves inside the cooldown are suppressed so a flapping connection doesn't
+// spam the log. Counters survive across socket instances, so someone who
+// leaves right after we rejoin still gets their notice.
 SupaSocket.prototype._presence = function () {
   var self = this;
   try {
     var list = self._presenceNames();
     var cur = {}, i;
     for (i = 0; i < list.length; i++) cur[list[i].name] = 1;
-    self._stable = self._stable || {};
-    self._renameCool = self._renameCool || {};
-    self._leftCool = self._leftCool || {};
+    self._stable = self._stable || window.__presStable || {};
+    self._renameCool = self._renameCool || window.__presRenameCool || {};
+    self._leftCool = self._leftCool || window.__presLeftCool || {};
     var now = Date.now(), nm;
     for (nm in cur) self._stable[nm] = (self._stable[nm] || 0) + 1;
     for (nm in self._stable) {
       if (!cur[nm]) {
-        if (self._stable[nm] >= 2 &&
+        if (nm === self._myName || (self._expectName && nm === self._expectName)) continue;
+        if (self._stable[nm] >= 1 &&
             (!self._renameCool[nm] || now - self._renameCool[nm] > 8000) &&
-            (!self._leftCool[nm] || now - self._leftCool[nm] > 60000)) {
+            (!self._leftCool[nm] || now - self._leftCool[nm] > 25000)) {
           self._leftCool[nm] = now;
           self._emit({ t: "system", text: nm + " left", ts: now });
         }
@@ -402,6 +405,9 @@ SupaSocket.prototype._presence = function () {
     }
     var keys = Object.keys(self._stable);
     if (keys.length > 200) for (i = 0; i < keys.length - 200; i++) delete self._stable[keys[i]];
+    window.__presStable = self._stable;
+    window.__presRenameCool = self._renameCool;
+    window.__presLeftCool = self._leftCool;
   } catch (e) {}
   metaGet("fake", []).then(function (fake) {
     var names = self._presenceNames();
@@ -684,6 +690,7 @@ SupaSocket.prototype.rpc.setName = function (data) {
     var first = !self._named;
     self._myName = finalName;
     self._named = true;
+    self._expectName = finalName;
     try {
       if (obj.pfp !== undefined) {
         var u = String(obj.pfp || "");
@@ -698,7 +705,7 @@ SupaSocket.prototype.rpc.setName = function (data) {
     } catch (e) {}
     self._ensureInbox(finalName).then(function () {
       try { self._room.track({ name: finalName, uid: self._myUid || "", named: true }); } catch (e) {}
-      if (first) self._broad({ t: "system", text: finalName + " joined", ts: Date.now() });
+      if (first && !self._quietJoin) self._broad({ t: "system", text: finalName + " joined", ts: Date.now() });
       else if (old && old !== finalName) {
         self._broad({ t: "rename", from: old, to: finalName, uid: self._myUid || "", ts: Date.now() });
         self._broad({ t: "system", text: old + " is now " + finalName, ts: Date.now() });

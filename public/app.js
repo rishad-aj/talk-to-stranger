@@ -5833,6 +5833,15 @@ async function claimSavedName(s, payload, maxWaitMs) {
     await new Promise((res) => setTimeout(res, r === "name_taken" ? 1500 : 500));
   }
 }
+// Our own link state: "connecting…" (shown after a short grace so sub-second
+// blips never flicker), never a bare "offline" while a reconnect is in flight.
+let linkDownTimer = null;
+function showLinkDown() {
+  try { clearTimeout(linkDownTimer); } catch (e) {}
+  linkDownTimer = setTimeout(() => {
+    try { if (socket && socket.readyState !== 1) onlineSub.textContent = "connecting…"; } catch (e) {}
+  }, 1200);
+}
 function connect() {  // Exactly one live socket at a time. A reconnect replaces the previous socket
   // rather than leaving it behind - and silences it first, so its own close
   // handler cannot schedule yet another connection. Two live sockets would both
@@ -5845,12 +5854,17 @@ function connect() {  // Exactly one live socket at a time. A reconnect replaces
   }
   const s = root.createServerSocket();
   socket = s;
+  // Lets the new socket tell our own handover gap (old session gone, new one
+  // not yet named) apart from a real leave, and stay quiet about rejoining.
+  s._expectName = savedNick || myName || "";
+  s._quietJoin = !!(previous && previous._named);
   savedNickApplied = false;
   let currentApplied = false;
   let bannedOnConnect = false;
 
   s.addEventListener("open", async () => {
     reconnectDelay = 500;
+    try { clearTimeout(linkDownTimer); } catch (e) {}
     try {
       const loc = await getMyIPLocation();
       try { s.rpc.reportLoc(loc).catch(() => {}); } catch (e) {}
@@ -5935,13 +5949,13 @@ function connect() {  // Exactly one live socket at a time. A reconnect replaces
   });
 
   s.addEventListener("close", (ev) => {
-    onlineSub.textContent = "offline";
+    showLinkDown();
     if (ev.code === 4403) return;
     scheduleReconnect(s);
   });
 
   s.opened.catch(() => {
-    onlineSub.textContent = "offline";
+    showLinkDown();
     scheduleReconnect(s);
   });
 }
