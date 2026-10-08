@@ -5426,22 +5426,37 @@ async function loadInitialHistory() {
 }
 
 function reloadChatHistory() {
+  return reloadChatHistoryAsync();
+}
+// A reconnect must not look like a reload: when messages are already on
+// screen the old DOM is kept and only genuinely new rows are appended (the
+// renderers skip ids they have already drawn), instead of blanking the whole
+// chat, and the user's scroll position is left alone.
+let historySoftRejoin = false;
+async function reloadChatHistoryAsync() {
   if (historyLoading) return;
   // History renders into the room's container; if a private chat (or the people
   // screen) is up right now, remember to do it when the room comes back.
   if (convo.mode !== "room") { roomHistoryStale = true; return; }
+  const soft = !!roomMessagesEl.querySelector(".msg");
+  historySoftRejoin = soft;
+  const prevTop = soft ? scroller.scrollTop : 0;
+  const wasBottom = soft ? isNearBottom() : true;
   historyLoading = true;
-  msgByWrapCleanup(roomMessagesEl);
-  roomMessagesEl.textContent = "";
-  seenMsgIds.clear();
-  typers.clear();
-  unreadCount = 0;
-  unreadChipBtn.classList.add("hide");
-  endSelection();
-  historyLoaded = false;
-  allOlderLoaded = false;
-  oldestLoadedTs = null;
-  loadHistoryCore();
+  if (!soft) {
+    msgByWrapCleanup(roomMessagesEl);
+    roomMessagesEl.textContent = "";
+    seenMsgIds.clear();
+    typers.clear();
+    unreadCount = 0;
+    unreadChipBtn.classList.add("hide");
+    endSelection();
+    historyLoaded = false;
+    allOlderLoaded = false;
+    oldestLoadedTs = null;
+  }
+  await loadHistoryCore();
+  if (soft && !wasBottom) { try { scroller.scrollTop = prevTop; } catch (e) {} }
 }
 
 function dmSend(payload) {
@@ -5654,7 +5669,7 @@ function silentAutoLoginRetry(s, loc, delay) {
     let r = null;
     try {
       const payload = JSON.stringify({ name: savedNick, uid: myUid, ...(needsPass(savedNick) && savedAdminPass ? { password: savedAdminPass } : {}), loc: loc || "" });
-      r = await s.rpc.setName(payload);
+      r = await claimSavedName(s, payload, 8000);
     } catch (e) { r = null; }
     if (r === "ok") {
       myName = savedNick;
@@ -5804,8 +5819,21 @@ let allOlderLoaded = false;
 let oldestLoadedTs = null;
 const seenMsgIds = new Set();
 
-function connect() {
-  // Exactly one live socket at a time. A reconnect replaces the previous socket
+// Reclaim our own saved nickname after a (re)connect. Our own stale presence
+// row can make the server answer "name_taken" for a few seconds, so that
+// answer is retried instead of treated as final - wiping the saved nick over
+// it would log the user out and pop the join screen for no reason.
+async function claimSavedName(s, payload, maxWaitMs) {
+  const t0 = Date.now();
+  let r = null;
+  for (;;) {
+    try { r = await s.rpc.setName(payload); } catch (err) { r = null; }
+    if (r === "ok" || r === "banned" || r === "wrong_password" || r === "unavailable_region" || r === "vpn_blocked") return r;
+    if (Date.now() - t0 > (maxWaitMs || 8000)) return r;
+    await new Promise((res) => setTimeout(res, r === "name_taken" ? 1500 : 500));
+  }
+}
+function connect() {  // Exactly one live socket at a time. A reconnect replaces the previous socket
   // rather than leaving it behind - and silences it first, so its own close
   // handler cannot schedule yet another connection. Two live sockets would both
   // be subscribed to the room, so every new message would be delivered (and
@@ -5831,13 +5859,10 @@ function connect() {
       if (savedNick && !currentApplied && !(needsPass(savedNick) && !savedAdminPass)) {
         currentApplied = true;
         let r = null;
-        for (let attempt = 0; attempt < 2 && r !== "ok" && r !== "banned" && r !== "wrong_password" && r !== "name_taken"; attempt++) {
-          try {
-            const payload = JSON.stringify({ name: savedNick, uid: myUid, ...(needsPass(savedNick) && savedAdminPass ? { password: savedAdminPass } : {}), loc });
-            r = await s.rpc.setName(payload);
-          } catch (err) { r = null; }
-          if (r !== "ok" && r !== "banned" && r !== "wrong_password" && r !== "name_taken") await new Promise((res) => setTimeout(res, 500));
-        }
+        try {
+          const payload = JSON.stringify({ name: savedNick, uid: myUid, ...(needsPass(savedNick) && savedAdminPass ? { password: savedAdminPass } : {}), loc });
+          r = await claimSavedName(s, payload, 8000);
+        } catch (err) { r = null; }
         if (r === "ok") {
           myName = savedNick;
           savedNickApplied = true;
@@ -5897,10 +5922,11 @@ function connect() {
     unreadCount = addNewMsgsBanner();
     if (unreadCount) {
       showUnreadChip(unreadCount);
-      if (!scrollToNewBanner(false)) scrollBottom(true);
-    } else {
+      if (!historySoftRejoin && !scrollToNewBanner(false)) scrollBottom(true);
+    } else if (!historySoftRejoin) {
       scrollBottom(true);
     }
+    historySoftRejoin = false;
     if (interactionReady()) msgInput.focus();
   });
 
