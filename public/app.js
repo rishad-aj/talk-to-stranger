@@ -3964,7 +3964,7 @@ const GIF_ZERO_DELAY = 100;
 const GIF_MIN_DELAY = 20;
 const GIF_MAX_DELAY = 8000;
 const GIF_MAX_DIM = 720;
-const GIF_BADGE_SVG = `<svg viewBox="0 0 64 34" width="52" height="28" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" width="61" height="31" rx="8" fill="rgba(20,22,26,0.72)" stroke="rgba(255,255,255,0.92)" stroke-width="2.5"/><text x="32" y="23.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="800" letter-spacing="1.5" fill="#fff">GIF</text></svg>`
+const GIF_BADGE_SVG = `<svg viewBox="0 0 46 46" width="46" height="46" xmlns="http://www.w3.org/2000/svg"><circle cx="23" cy="23" r="23" fill="rgba(232,232,236,0.78)"/><text x="23" y="27" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="800" letter-spacing="0.5" fill="#5b5b60">GIF</text></svg>`
 const gifDecodeCache = new Map();
 
 function gifFrameMs(us) {
